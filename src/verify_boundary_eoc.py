@@ -62,4 +62,4 @@ for crystal in crystals[0:3]:
     eoc_rec.addDataPoint(len(crystal.Mesh.elements())**0.5,
                          boundary_error ** 0.5)
 
-print "Boundary normal derivative EOC:", eoc_rec.estimateOrderOfConvergence()
+print "Boundary normal derivative EOC:", eoc_rec.estimateOrderOfConvergence()[1]
