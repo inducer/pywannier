@@ -3,7 +3,7 @@ import photonic_crystal as pc
 import pylinear.matrices as num
 import math
 
-dimensions = 1
+dimensions = 2
 
 def getEigenvalues(k):
     eigenvalues_here = []
@@ -30,12 +30,15 @@ elif dimensions == 2:
                0.5*(rl[0]+rl[1]),
                0*rl[0]]
 
-k_track = tools.interpolateVectorList(k_track, 30)
+k_track = tools.interpolateVectorList(k_track, 49)
 
 bdfile = file(",,band_diagram_analytic.data", "w")
 evlists = [getEigenvalues(k) for k in k_track]
 for i in range(len(evlists[0])):
     for j in range(len(k_track)):
-        bdfile.write("%f\t%f\n" % (k_track[j][0], scale_eigenvalue(evlists[j][i])))
+        bdfile.write("%f\t%f\n" % (j, scale_eigenvalue(evlists[j][i])))
     bdfile.write("\n")
 
+ktfile = file(",,k_track.data", "w")
+for j in range(len(k_track)):
+    ktfile.write("\t".join([str(coord) for coord in k_track[j]])+"\n")
