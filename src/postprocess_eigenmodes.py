@@ -1,6 +1,10 @@
 import photonic_crystal as pc
 import fempy.stopwatch
+import fempy.tools as tools
 import cPickle as pickle
+
+def projectionOnto(basis, spc, vec):
+    return tools.linearCombination([spc(vec, bv) for bv in basis], basis)
 
 def run():
     job = fempy.stopwatch.tJob("loading")
@@ -12,7 +16,6 @@ def run():
 
         spc = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
                                                            crystal.ScalarProduct)
-
         job = fempy.stopwatch.tJob("normalizing modes")
         pc.normalizeModes(crystal, spc)
         job.done()

@@ -23,12 +23,15 @@ import fempy.visualization as visualization
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
 
+job = fempy.stopwatch.tJob("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
+job.done()
 
 for crystal in crystals:
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
                                                 crystal.Lattice.DirectLatticeBasis)
 
+    job = fempy.stopwatch.tJob("checking")
     for band_index in range(len(crystal.Bands)):
         band = crystal.Bands[band_index]
         pband = crystal.PeriodicBands[band_index]
@@ -50,4 +53,6 @@ for crystal in crystals:
                 assert mtools.norm2(my_coord_sum) < 1e-9
                 assert abs(my_sum) < 1e-9
                 assert abs(my_periodic_sum) < 1e-9
+    job.done()
+    print "OK"
 

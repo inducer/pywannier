@@ -29,18 +29,24 @@ def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
 
     crystal.ScalarProduct = eigensolver.massMatrix()
 
-    for key in k_grid:
-        k = k_grid[key]
+    for k_index in k_grid.chopUpperBoundary():
+        k = k_grid[k_index]
 
-        if crystal.HasInversionSymmetry and k[0] < 0:
+        if crystal.HasInversionSymmetry and k[0] > 0:
             # use inversion symmetry, only compute one half.
             continue
 
         print "computing for k =", k
-        crystal.Modes[key] = eigensolver.solve(
-            sigma,
-            pc.getFloquetConstraints(periodicity_nodes, k))
+        eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, k))
+        crystal.Modes[k_index] = eigensolver.solve(sigma,
+                                                   tolerance = 1e-10)
 
+    # make sure our symmetry lookups work
+    for k_index in k_grid:
+        eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, 
+                                                              k_grid[k_index]))
+        for evalue, emode in crystal.Modes[k_index]:
+            assert eigensolver.computeEigenpairResidual(evalue, emode) < 1e-9
 
 
       
@@ -85,10 +91,10 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
         
         if has_inversion_symmetry:
             mode_dict = tools.tDependentDictionary(
-                pc.tInvertedModeListLookerUpper(k_grid.gridIntervalCounts()))
+                pc.tReducedBrillouinModeListLookerUpper(k_grid))
         else:
-            mode_dict = {}
-        
+            mode_dict = pc.makeKPeriodicLookupStructure(k_grid)
+
         crystal = pc.tPhotonicCrystal(lattice, 
                                       mesh, 
                                       k_grid, 

@@ -104,10 +104,72 @@ class tInvertedModeListLookerUpper:
     def __call__(self, dictionary, failed_key):
         new_key = tuple(map(lambda (idx, count): count-idx, 
                             zip(failed_key, self._GridIntervalCounts)))
+        print "inverted", failed_key, "->", new_key
         modelist = dictionary[new_key]
         return tools.tFakeList(lambda i: (modelist[i][0].conjugate(),
                                           modelist[i][1].conjugate()),
                                len(modelist))
+
+
+
+
+def invertKIndex(grid_interval_counts, k_index):
+    return  tuple(map(lambda (idx, count): count-idx, 
+                      zip(k_index, grid_interval_counts)))
+
+
+
+
+class tReducedBrillouinModeListLookerUpper:
+    """This class is meant as lookup function for a tools.tDependentDictionary.
+    It will map all of k-space to the left (k[0]<0) half of the Brillouin zone,
+    excluding the top rim.
+
+    This is the version for the Modes array.
+    """
+
+    def __init__(self, k_grid):
+        self.ChoppedGrid = k_grid.chopUpperBoundary()
+        self.GridIntervalCounts = k_grid.gridIntervalCounts()
+
+    def __call__(self, dictionary, failed_key):
+        reduced_key = self.ChoppedGrid.reducePeriodically(failed_key)
+        try:
+            return dictionary[reduced_key]
+        except KeyError:
+            inverted_key = self.ChoppedGrid.reducePeriodically(
+                invertKIndex(self.GridIntervalCounts, reduced_key))
+
+            modelist = dictionary[inverted_key]
+            return tools.tFakeList(lambda i: (modelist[i][0].conjugate(),
+                                              modelist[i][1].conjugate()),
+                                   len(modelist))
+
+
+
+
+class tReducedBrillouinLookerUpper:
+    """This class is meant as lookup function for a tools.tDependentDictionary.
+    It will map all of k-space to the left (k[0]<0) half of the Brillouin zone,
+    excluding the top rim.
+
+    This is the version for the bands array.
+    """
+
+    def __init__(self, k_grid):
+        self.ChoppedGrid = k_grid.chopUpperBoundary()
+        self.GridIntervalCounts = k_grid.gridIntervalCounts()
+
+    def __call__(self, dictionary, failed_key):
+        reduced_key = self.ChoppedGrid.reducePeriodically(failed_key)
+        try:
+            return dictionary[reduced_key]
+        except KeyError:
+            inverted_key = self.ChoppedGrid.reducePeriodically(
+                invertKIndex(self.GridIntervalCounts, reduced_key))
+
+            evalue, mode = dictionary[inverted_key]
+            return evalue.conjugate(), mode.conjugate()
 
 
 
@@ -315,15 +377,16 @@ def findBands(crystal, scalar_product_calculator):
     def findBand(band_index):
         if crystal.HasInversionSymmetry:
             band = tools.tDependentDictionary(
-                tInvertedModeLookerUpper(k_grid.gridIntervalCounts()))
+                tReducedBrillouinLookerUpper(k_grid))
         else:
-            band = {}
+            mode_dict = makeKPeriodicLookupStructure(k_grid)
+
 
         first = True
 
-        for k_index in k_grid:
+        for k_index in k_grid.chopUpperBoundary():
             k = k_grid[k_index]
-            if crystal.HasInversionSymmetry and k[0] < 0:
+            if crystal.HasInversionSymmetry and k[0] > 0:
                 continue
 
             if first:
@@ -507,8 +570,10 @@ def analyzeBandStructure(bands):
 
 
 def normalizeModes(crystal, scalar_product_calculator):
-    for key in crystal.KGrid:
-        norms = []
+    for key in crystal.KGrid: #.chopUpperBoundary():
+        k = crystal.KGrid[key]
+        #if crystal.HasInversionSymmetry and k[0] > 0:
+            #continue
         for index, (evalue, emode) in enumerate(crystal.Modes[key]):
             norm_squared = scalar_product_calculator(emode, emode)
             assert abs(norm_squared.imag) < 1e-10
@@ -534,7 +599,7 @@ def periodicizeBands(crystal, bands, exponent = -1):
     for band in bands:
         pband = {}
         for ki in crystal.KGrid:
-            if crystal.HasInversionSymmetry and crystal.KGrid[ki][0] < 0:
+            if crystal.HasInversionSymmetry and crystal.KGrid[ki][0] > 0:
                 continue
             pband[ki] = band[ki][0], \
                         periodicizeMeshFunction(band[ki][1],
