@@ -1,0 +1,159 @@
+### DataVizManagers ###
+1
+### 1. DataVizManager ###
+### VtkDataReader ###
+VtkDataReader
+,,bands.vtk
+vtkPolyDataReader
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetReadFromInputString', 0), ('SetReleaseDataFlag', 0), ('SetFileName', ',,bands.vtk'), ('SetProgress', 1.0)]
+### End of VtkDataReader ###
+### ModuleManagers ###
+4
+### 1. ModuleManager ###
+### Scalar Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End of Scalar Lookup Table ###
+### Vector Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End Vector Lookup Table ###
+### Filters ###
+0
+### End of Filters ###
+### Modules ###
+2
+### 1. PolyData ###
+PolyData
+vtkOpenGLPolyDataMapper
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGlobalImmediateModeRendering', 0), ('SetImmediateModeRendering', 0), ('SetScalarVisibility', 0), ('SetUseLookupTableScalarRange', 0), ('SetColorMode', 0), ('SetResolveCoincidentTopology', 2), ('SetScalarMode', 0), ('SetGhostLevel', 0), ('SetNumberOfPieces', 1), ('SetNumberOfSubPieces', 1), ('SetPiece', 0), ('SetProgress', 0.0), ('SetRenderTime', 0.0), ('SetResolveCoincidentTopologyZShift', 0.01), ('SetScalarRange', (0.0, 1.0))]
+vtkOpenGLActor
+[('SetDebug', 0), ('SetDragable', 1), ('SetPickable', 1), ('SetVisibility', 1), ('SetOrientation', (0.0, -0.0, 0.0)), ('SetOrigin', (0.0, 0.0, 0.0)), ('SetPosition', (0.0, 0.0, 0.0)), ('SetScale', (1.0, 1.0, 1.0))]
+vtkOpenGLProperty
+[('SetBackfaceCulling', 0), ('SetDebug', 0), ('SetEdgeVisibility', 0), ('SetFrontfaceCulling', 0), ('SetInterpolation', 1), ('SetRepresentation', 2), ('SetAmbient', 0.0), ('SetAmbientColor', (0.0, 1.0, 0.0)), ('SetColor', (0.0, 1.0, 0.0)), ('SetDiffuse', 1.0), ('SetDiffuseColor', (0.0, 1.0, 0.0)), ('SetEdgeColor', (1.0, 1.0, 1.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 1.0), ('SetOpacity', 0.2800000011920929), ('SetPointSize', 1.0), ('SetSpecular', 0.0), ('SetSpecularColor', (0.0, 1.0, 0.0)), ('SetSpecularPower', 1.0)]
+### End of 1. PolyData ###
+### 2. Axes ###
+Axes
+vtkCubeAxesActor2D
+[('SetBold', 1), ('SetDebug', 0), ('SetDragable', 1), ('SetItalic', 1), ('SetPickable', 1), ('SetScaling', 0), ('SetShadow', 0), ('SetUseRanges', 0), ('SetVisibility', 1), ('SetXAxisVisibility', 1), ('SetYAxisVisibility', 1), ('SetZAxisVisibility', 1), ('SetFlyMode', 0), ('SetFontFamily', 0), ('SetBounds', (-3.1415927410125732, 3.1415927410125732, -3.1415927410125732, 3.1415927410125732, 1.063918091404048e-07, 9.6153268814086914)), ('SetCornerOffset', 0.0), ('SetFontFactor', 1.3500000238418579), ('SetHeight', 0.5), ('SetInertia', 1.0), ('SetLabelFormat', '%-#6.3g'), ('SetLayerNumber', 0), ('SetNumberOfLabels', 2), ('SetPosition', (0.0, 0.0)), ('SetPosition2', (0.5, 0.5)), ('SetWidth', 0.5), ('SetXLabel', 'X'), ('SetYLabel', 'Y'), ('SetZLabel', 'Z')]
+vtkProperty2D
+[('SetDebug', 0), ('SetDisplayLocation', 1), ('SetColor', (0.0, 0.0, 0.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 1.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0)]
+### End of 2. Axes ###
+### End of Modules ###
+### End of 1. ModuleManager ###
+### 2. ModuleManager ###
+### Scalar Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End of Scalar Lookup Table ###
+### Vector Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End Vector Lookup Table ###
+### Filters ###
+1
+### 1. CutPlane ###
+CutPlane
+0, 100, 0.031400
+vtkPlane
+[('SetDebug', 0), ('SetNormal', (-0.017452405765652657, 0.99984771013259888, 6.1230317691118863e-17)), ('SetOrigin', (0.0, 0.0, 0.88212132453918457))]
+vtkCutter
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGenerateCutScalars', 0), ('SetReleaseDataFlag', 0), ('SetSortBy', 0), ('SetNumberOfContours', 1), ('SetProgress', 1.0)]
+### End of 1. CutPlane ###
+### End of Filters ###
+### Modules ###
+1
+### 1. PolyData ###
+PolyData
+vtkOpenGLPolyDataMapper
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGlobalImmediateModeRendering', 0), ('SetImmediateModeRendering', 0), ('SetScalarVisibility', 0), ('SetUseLookupTableScalarRange', 0), ('SetColorMode', 0), ('SetResolveCoincidentTopology', 2), ('SetScalarMode', 0), ('SetGhostLevel', 0), ('SetNumberOfPieces', 1), ('SetNumberOfSubPieces', 1), ('SetPiece', 0), ('SetProgress', 0.0), ('SetRenderTime', 0.0), ('SetResolveCoincidentTopologyZShift', 0.01), ('SetScalarRange', (0.0, 1.0))]
+vtkOpenGLActor
+[('SetDebug', 0), ('SetDragable', 1), ('SetPickable', 1), ('SetVisibility', 1), ('SetOrientation', (0.0, -0.0, 0.0)), ('SetOrigin', (0.0, 0.0, 0.0)), ('SetPosition', (0.0, 0.0, 0.0)), ('SetScale', (1.0, 1.0, 1.0))]
+vtkOpenGLProperty
+[('SetBackfaceCulling', 0), ('SetDebug', 0), ('SetEdgeVisibility', 0), ('SetFrontfaceCulling', 0), ('SetInterpolation', 1), ('SetRepresentation', 2), ('SetAmbient', 0.0), ('SetAmbientColor', (0.0, 1.0, 0.0)), ('SetColor', (0.0, 1.0, 0.0)), ('SetDiffuse', 1.0), ('SetDiffuseColor', (0.0, 1.0, 0.0)), ('SetEdgeColor', (1.0, 1.0, 1.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 3.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0), ('SetSpecular', 0.0), ('SetSpecularColor', (0.0, 1.0, 0.0)), ('SetSpecularPower', 1.0)]
+### End of 1. PolyData ###
+### End of Modules ###
+### End of 2. ModuleManager ###
+### 3. ModuleManager ###
+### Scalar Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End of Scalar Lookup Table ###
+### Vector Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End Vector Lookup Table ###
+### Filters ###
+1
+### 1. CutPlane ###
+CutPlane
+0, 10, 0.378939
+vtkPlane
+[('SetDebug', 0), ('SetNormal', (-0.70710676908493042, 0.70710676908493042, 6.1230317691118863e-17)), ('SetOrigin', (0.0, 0.0, 0.88212132453918457))]
+vtkCutter
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGenerateCutScalars', 0), ('SetReleaseDataFlag', 0), ('SetSortBy', 0), ('SetNumberOfContours', 1), ('SetProgress', 1.0)]
+### End of 1. CutPlane ###
+### End of Filters ###
+### Modules ###
+1
+### 1. PolyData ###
+PolyData
+vtkOpenGLPolyDataMapper
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGlobalImmediateModeRendering', 0), ('SetImmediateModeRendering', 0), ('SetScalarVisibility', 0), ('SetUseLookupTableScalarRange', 0), ('SetColorMode', 0), ('SetResolveCoincidentTopology', 2), ('SetScalarMode', 0), ('SetGhostLevel', 0), ('SetNumberOfPieces', 1), ('SetNumberOfSubPieces', 1), ('SetPiece', 0), ('SetProgress', 0.0), ('SetRenderTime', 0.0), ('SetResolveCoincidentTopologyZShift', 0.01), ('SetScalarRange', (0.0, 1.0))]
+vtkOpenGLActor
+[('SetDebug', 0), ('SetDragable', 1), ('SetPickable', 1), ('SetVisibility', 1), ('SetOrientation', (0.0, -0.0, 0.0)), ('SetOrigin', (0.0, 0.0, 0.0)), ('SetPosition', (0.0, 0.0, 0.0)), ('SetScale', (1.0, 1.0, 1.0))]
+vtkOpenGLProperty
+[('SetBackfaceCulling', 0), ('SetDebug', 0), ('SetEdgeVisibility', 0), ('SetFrontfaceCulling', 0), ('SetInterpolation', 1), ('SetRepresentation', 2), ('SetAmbient', 0.0), ('SetAmbientColor', (0.0, 1.0, 0.0)), ('SetColor', (0.0, 1.0, 0.0)), ('SetDiffuse', 1.0), ('SetDiffuseColor', (0.0, 1.0, 0.0)), ('SetEdgeColor', (1.0, 1.0, 1.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 3.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0), ('SetSpecular', 0.0), ('SetSpecularColor', (0.0, 1.0, 0.0)), ('SetSpecularPower', 1.0)]
+### End of 1. PolyData ###
+### End of Modules ###
+### End of 3. ModuleManager ###
+### 4. ModuleManager ###
+### Scalar Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End of Scalar Lookup Table ###
+### Vector Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/pywannier/src/bands_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End Vector Lookup Table ###
+### Filters ###
+1
+### 1. CutPlane ###
+CutPlane
+100, 100, 0.031416
+vtkPlane
+[('SetDebug', 0), ('SetNormal', (1.0, 0.0, 6.1230317691118863e-17)), ('SetOrigin', (3.1415901184082031, 0.0, 0.88212132453918457))]
+vtkCutter
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGenerateCutScalars', 0), ('SetReleaseDataFlag', 0), ('SetSortBy', 0), ('SetNumberOfContours', 1), ('SetProgress', 1.0)]
+### End of 1. CutPlane ###
+### End of Filters ###
+### Modules ###
+1
+### 1. PolyData ###
+PolyData
+vtkOpenGLPolyDataMapper
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGlobalImmediateModeRendering', 0), ('SetImmediateModeRendering', 0), ('SetScalarVisibility', 0), ('SetUseLookupTableScalarRange', 0), ('SetColorMode', 0), ('SetResolveCoincidentTopology', 2), ('SetScalarMode', 0), ('SetGhostLevel', 0), ('SetNumberOfPieces', 1), ('SetNumberOfSubPieces', 1), ('SetPiece', 0), ('SetProgress', 0.0), ('SetRenderTime', 0.0), ('SetResolveCoincidentTopologyZShift', 0.01), ('SetScalarRange', (0.0, 1.0))]
+vtkOpenGLActor
+[('SetDebug', 0), ('SetDragable', 1), ('SetPickable', 1), ('SetVisibility', 1), ('SetOrientation', (0.0, -0.0, 0.0)), ('SetOrigin', (0.0, 0.0, 0.0)), ('SetPosition', (0.0, 0.0, 0.0)), ('SetScale', (1.0, 1.0, 1.0))]
+vtkOpenGLProperty
+[('SetBackfaceCulling', 0), ('SetDebug', 0), ('SetEdgeVisibility', 0), ('SetFrontfaceCulling', 0), ('SetInterpolation', 1), ('SetRepresentation', 2), ('SetAmbient', 0.0), ('SetAmbientColor', (0.0, 1.0, 0.0)), ('SetColor', (0.0, 1.0, 0.0)), ('SetDiffuse', 1.0), ('SetDiffuseColor', (0.0, 1.0, 0.0)), ('SetEdgeColor', (1.0, 1.0, 1.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 3.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0), ('SetSpecular', 0.0), ('SetSpecularColor', (0.0, 1.0, 0.0)), ('SetSpecularPower', 1.0)]
+### End of 1. PolyData ###
+### End of Modules ###
+### End of 4. ModuleManager ###
+### End of ModuleManagers ###
+### End of 1. DataVizManager ###
+### End of DataVizManagers ###
+### RenderWindow ###
+vtkOpenGLRenderer
+[('SetBackingStore', 0), ('SetDebug', 0), ('SetInteractive', 1), ('SetLightFollowCamera', 1), ('SetTwoSidedLighting', 1), ('SetAllocatedRenderTime', 10000.0), ('SetAmbient', (1.0, 1.0, 1.0)), ('SetAspect', (1.0571776628494263, 1.0)), ('SetBackground', (1.0, 1.0, 1.0)), ('SetDisplayPoint', (134.350830078125, 1256.2259521484375, 0.52225327491760254)), ('SetLayer', 0), ('SetPixelAspect', (1.0, 1.0)), ('SetViewPoint', (-0.7302899956703186, 2.0565109252929688, 0.52225327491760254)), ('SetViewport', (0.0, 0.0, 1.0, 1.0)), ('SetWorldPoint', (3.1415927410125732, 3.1415927410125732, 9.6153268814086914, 1.0))]
+vtkOpenGLCamera
+[('SetDebug', 0), ('SetParallelProjection', 0), ('SetUseHorizontalViewAngle', 0), ('SetClippingRange', (6.717005034413881, 25.46071758346066)), ('SetDistance', 15.244052729943045), ('SetEyeAngle', 2.0), ('SetFocalDisk', 1.0), ('SetFocalPoint', (-0.40590283274650574, -0.067148331552743912, 3.565518856048584)), ('SetParallelScale', 6.2831854820300004), ('SetPosition', (2.7897309687790828, 14.793087909070811, 4.7241590558903628)), ('SetRoll', -115.87777514497006), ('SetThickness', 18.74371254904678), ('SetViewAngle', 30.0), ('SetViewPlaneNormal', (0.20963151060535121, 0.97482188653378377, 0.076006047759591272)), ('SetViewShear', (0.0, 0.0, 1.0)), ('SetViewUp', (0.093306325193459702, -0.097322411784323298, 0.99086945550025651)), ('SetWindowCenter', (0.0, 0.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 1), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.5, 0.70710676908493042, 0.5))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 1), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 0.60000002384185791), ('SetPosition', (-0.75, -0.5, 0.4330126941204071))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 1), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 0.5), ('SetPosition', (0.75, -0.5, 0.4330126941204071))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+### End of RenderWindow ###
