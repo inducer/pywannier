@@ -51,3 +51,26 @@ keys = range(len(list_of_ks))
 pc.writeEigenvalueLocusPlot(",,ev_locus.data", crystal, bands, 
                             [0*rl[0], 0.25 * rl[0], 0.5 * rl[0]])
 
+# ---------------------------------------------------------
+def generateHierarchicGaussians(crystal, typecode):
+    for l in tools.generateAllPositiveIntegerTuples(2,1):
+        div_x, div_y = tuple(l)
+        dlb = crystal.Lattice.DirectLatticeBasis
+        h_x = dlb[0] / div_x
+        h_y = dlb[1] / div_y
+
+        def gaussian(point):
+            result = 0
+            for idx_x in range(div_x):
+                y_result = 0
+                for idx_y in range(div_y):
+                    y_result += math.exp(-20*div_y**2*mtools.sp(dlb[1], point-(idx_y+.5)*h_y+dlb[1]/2)**2)
+                result += y_result * \
+                          math.exp(-20*div_x**2*mtools.sp(dlb[0], point-(idx_x+.5)*h_x+dlb[0]/2)**2)
+            return result
+        yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 
+                                                     gaussian, 
+                                                     typecode,
+                                                     crystal.NodeNumberAssignment)
+
+

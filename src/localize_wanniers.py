@@ -267,10 +267,9 @@ def minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp):
     # Polak-Ribi`ere with implicit restart
 
     d = last_r = -grad(x)
-    observer = iteration.makeObserver(min_change = 1e-4, max_unchanged = 15)
+    observer = iteration.makeObserver(min_change = 1e-5, max_unchanged = 3)
     observer.reset()
 
-    restart = 10
     last_fval = f(x)
     try:
         while True:
@@ -286,13 +285,8 @@ def minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp):
             x = x_plus_alpha_grad(x, alpha, d)
             r = -grad(x)
             beta = max(0, sp(r, r - last_r)/sp(last_r, last_r))
-            if restart == 0:
-                beta = 0
-                print "Restarting CG."
-                restart = 10
-            else:
-                restart -= 1
             d = r + beta * d
+            last_r = r
     except iteration.tIterationStalled:
         pass
     except iteration.tIterationStopped:
@@ -920,10 +914,10 @@ class tMarzariSpreadMinimizer:
         def sp(m1, m2):
             return kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, m1, m2)
 
-        return minimizeByFixedStep(tDictionaryOfMatrices(mix_matrix), 
-                                   f, grad, self.getMixMatrix,
-                                   step = 0.5/(4*sum(self.KWeights.KWeights)),
-                                   sp = sp)
+        return minimizeByCG(tDictionaryOfMatrices(mix_matrix), 
+                            f, grad, self.getMixMatrix,
+                            step = 0.5/(4*sum(self.KWeights.KWeights)),
+                            sp = sp)
 
 def computeMixedBands(crystal, bands, mix_matrix):
     # WARNING! Don't be tempted to insert symmetry code in here, since
@@ -990,34 +984,16 @@ def averagePhaseDeviation(multicell_grid, func_on_multicell_grid):
 
     my_phase_diff_sum = 0.
     n = 0
+    n_total = 0
     for gi in multicell_grid:
         fvec = func_on_multicell_grid[gi].vector() / avg_phase_term
             
         for z in fvec:
-            my_phase_diff_sum += abs(cmath.log(z).imag)
-            n += 1
-    return my_phase_diff_sum / (n * math.pi)
-
-def generateHierarchicGaussians(crystal, typecode):
-    for l in tools.generateAllPositiveIntegerTuples(2,1):
-        div_x, div_y = tuple(l)
-        dlb = crystal.Lattice.DirectLatticeBasis
-        h_x = dlb[0] / div_x
-        h_y = dlb[1] / div_y
-
-        def gaussian(point):
-            result = 0
-            for idx_x in range(div_x):
-                y_result = 0
-                for idx_y in range(div_y):
-                    y_result += math.exp(-20*div_y**2*mtools.sp(dlb[1], point-(idx_y+.5)*h_y+dlb[1]/2)**2)
-                result += y_result * \
-                          math.exp(-20*div_x**2*mtools.sp(dlb[0], point-(idx_x+.5)*h_x+dlb[0]/2)**2)
-            return result
-        yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 
-                                                     gaussian, 
-                                                     typecode,
-                                                     crystal.NodeNumberAssignment)
+            if abs(z) >= 1e-2:
+                my_phase_diff_sum += abs(cmath.log(z).imag)
+                n += 1
+            n_total += 1
+    return my_phase_diff_sum / (n * math.pi), n, n_total
 
 def generateRandomGaussians(crystal, typecode):
     dlb = crystal.Lattice.DirectLatticeBasis
@@ -1093,7 +1069,6 @@ def guessInitialMixMatrix(crystal, bands, sp):
     return mix_matrix
 
 def run():
-    #print "WARNING: Id+dW still enabled"
     debug_mode = raw_input("enable debug mode? [n]") == "y"
     ilevel_str = raw_input("interactivity level? [0]")
     interactivity_level = (ilevel_str) and int(ilevel_str) or 0
@@ -1115,10 +1090,12 @@ def run():
     sp = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
                                                       crystal.MassMatrix)
                                                       
-    #gaps, clusters = pc.analyzeBandStructure(crystal.Bands)
+    gaps, clusters = pc.analyzeBandStructure(crystal.Bands)
+    print "Gaps:", gaps
+    print "Clusters:", clusters
 
-    bands = crystal.Bands[1:2]
-    pbands = crystal.PeriodicBands[1:2]
+    bands = crystal.Bands[1:6]
+    pbands = crystal.PeriodicBands[1:6]
 
     job = fempy.stopwatch.tJob("guessing initial mix")
     mix_matrix = guessInitialMixMatrix(crystal, 
