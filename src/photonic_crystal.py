@@ -395,13 +395,14 @@ def findBands(crystal, modes, scalar_product_calculator):
     def findBand(band_index):
         band_indices = makeKPeriodicLookupStructure(k_grid)
 
-        print "WARNING: No-op findBands"
         # reset taken_eigenvalues
         for k_index in k_grid:
             taken_eigenvalues[k_index] = sets.Set()
             band_indices[k_index] = band_index
             
-        return tBand(crystal, modes, band_indices)
+        if False:
+            print "WARNING: No-op findBands"
+            return tBand(crystal, modes, band_indices)
 
         for k_index in k_grid:
             k = k_grid[k_index]

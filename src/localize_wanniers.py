@@ -45,15 +45,20 @@ def makeRandomKDependentSkewHermitianMatrix(crystal, size, tc):
         matrix[k_index] = mtools.makeRandomSkewHermitianMatrix(size, tc)
     return matrix
 
+def gradScalarProduct(a1, a2):
+    rp = num.multiply(a1.real, a2.real)
+    ip = num.multiply(a1.imaginary, a2.imaginary)
+    return mtools.entrySum(rp) + mtools.entrySum(ip)
+
 def kDependentMatrixGradientScalarProduct(k_grid, a1, a2):
     # we can't use complex multiplication since our "complex" number
     # here is just a convenient notation for a gradient, so the real
     # and imaginary parts have to stay separate.
     sp = 0.
     for k_index in k_grid:
-        rp = num.asarray(num.multiply(a1[k_index].real, a2[k_index].real), num.Complex)
-        ip = num.asarray(num.multiply(a1[k_index].imaginary, a2[k_index].imaginary), num.Complex)
-        sp += mtools.entrySum(rp) + 1j*mtools.entrySum(ip)
+        rp = num.multiply(a1[k_index].real, a2[k_index].real)
+        ip = num.multiply(a1[k_index].imaginary, a2[k_index].imaginary)
+        sp += mtools.entrySum(rp) + mtools.entrySum(ip)
     return sp / k_grid.gridPointCount()
 
 def operateOnKDependentMatrix(k_grid, a, m_op):
@@ -334,8 +339,8 @@ class tMarzariSpreadMinimizer:
         wannier_centers = []
         for n in range(n_bands):
             result = num.zeros((2,), num.Float)
-            for k_index in self.Crystal.KGrid:
-                for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                for k_index in self.Crystal.KGrid:
                     if scalar_products[k_index, kgii] is None:
                         continue
 
@@ -353,8 +358,8 @@ class tMarzariSpreadMinimizer:
         total_spread_f = 0
         for n in range(n_bands):
             mean_r_squared = 0
-            for k_index in self.Crystal.KGrid:
-                for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                for k_index in self.Crystal.KGrid:
                     if scalar_products[k_index, kgii] is None:
                         continue
 
@@ -371,8 +376,8 @@ class tMarzariSpreadMinimizer:
         wannier_centers = []
         for n in range(n_bands):
             result = num.zeros((2,), num.Complex)
-            for k_index in self.Crystal.KGrid:
-                for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                for k_index in self.Crystal.KGrid:
                     if scalar_products[k_index, kgii] is None:
                         continue
 
@@ -390,8 +395,8 @@ class tMarzariSpreadMinimizer:
         total_spread_f = 0
         for n in range(n_bands):
             mean_r_squared = 0
-            for k_index in self.Crystal.KGrid:
-                for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                for k_index in self.Crystal.KGrid:
                     if scalar_products[k_index, kgii] is None:
                         continue
 
@@ -403,8 +408,8 @@ class tMarzariSpreadMinimizer:
 
     def omegaI(self, n_bands, scalar_products):
         omega_i = 0
-        for k_index in self.Crystal.KGrid:
-            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+        for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for k_index in self.Crystal.KGrid:
                 if scalar_products[k_index, kgii] is None:
                     continue
 
@@ -414,8 +419,8 @@ class tMarzariSpreadMinimizer:
 
     def omegaOD(self, scalar_products):
         omega_od = 0
-        for k_index in self.Crystal.KGrid:
-            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+        for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for k_index in self.Crystal.KGrid:
                 if scalar_products[k_index, kgii] is None:
                     continue
 
@@ -429,8 +434,8 @@ class tMarzariSpreadMinimizer:
 
         omega_d = 0.
         for n in range(n_bands):
-            for k_index in self.Crystal.KGrid:
-                for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                for k_index in self.Crystal.KGrid:
                     if scalar_products[k_index, kgii] is None:
                         continue
 
@@ -532,10 +537,7 @@ class tMarzariSpreadMinimizer:
             gradient[k_index] = result
         return gradient
 
-    def spreadFunctionalGradientOmegaOD(self, n_bands, scalar_products, arg, wannier_centers = None):
-        if wannier_centers is None:
-            wannier_centers = self.wannierCenters(n_bands, scalar_products, arg)
-
+    def spreadFunctionalGradientOmegaOD(self, n_bands, scalar_products, arg):
         gradient = {}
         for k_index in self.Crystal.KGrid:
             result = num.zeros((n_bands, n_bands), num.Complex)
@@ -684,6 +686,17 @@ class tMarzariSpreadMinimizer:
                     doiod3 = 0
                     doiod4 = 0
                     doiod5 = 0
+                    doiod7 = 0
+
+                    kdep_dw = {}
+                    for k_index in self.Crystal.KGrid:
+                        kdep_dw[k_index] = x * gradient[k_index]
+
+                    doiod6 = gpc * kDependentMatrixGradientScalarProduct(
+                        self.Crystal.KGrid,
+                        kdep_dw,
+                        self.spreadFunctionalGradientOmegaOD(len(pbands), 
+                                                             sps, arg))
 
                     for k_index in self.Crystal.KGrid:
                         for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
@@ -726,8 +739,12 @@ class tMarzariSpreadMinimizer:
                                                   + sum(num.multiply(num.diagonal(num.conjugate(mm(dw_plusb, m_plusb))),
                                                                      num.diagonal(num.conjugate(m))))).real
                             doiod5 += doiod_here5
-
                             assert abs(doiod_here4-doiod_here5) < 1e-11
+
+                            re_r = (num.transpose(r)-num.conjugate(r))/2
+                            grad_od = -4 * w_b * re_r
+                            doiod7_here = gradScalarProduct(dw, grad_od)
+                            doiod7 += doiod7_here
 
                             if print_count:
                                 #print k_index, kgii
@@ -745,7 +762,9 @@ class tMarzariSpreadMinimizer:
                     assert abs(after_oiod-after_oiod2) < 1e-9
                     assert abs(doiod4-doiod5) < 1e-11
                     assert abs(doiod3-doiod5) < 1e-11
-                    print "doiod total", after_oiod-before_oiod, doiod3
+                    assert abs(doiod6-doiod7) < 1e-11
+                    print "doiod total", after_oiod-before_oiod, doiod3, \
+                          doiod6, doiod7
 
                 testDerivs(1e-6)
                 testDerivs(1e-5)
@@ -775,7 +794,7 @@ class tMarzariSpreadMinimizer:
                     oi_here = self.omegaI(len(pbands), temp_sps)
                     od = self.omegaD(len(pbands), temp_sps, arg)
                     ood = self.omegaOD(temp_sps)
-                    return od, oi_here+ood, oi_here+od+ood, sp.real, sp_od.real, sp_d.real
+                    return od, oi_here+ood, oi_here+od+ood, sp, sp_od, sp_d
                            
                 step = 0.5/(4*sum(self.KWeights.KWeights))
 

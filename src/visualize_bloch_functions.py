@@ -54,7 +54,6 @@ for band_index, band in enumerate(crystal.Bands):
 
             if value in ["p", "u"]:
                 f_on_grid = {}
-                offsets_and_mesh_functions = []
                 for multicell_index in multicell_grid:
                     R = multicell_grid[multicell_index]
 

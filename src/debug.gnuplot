@@ -3,7 +3,7 @@
 set grid
 plot \
 ",,f1.data" title "o_od", \
-",,f4.data" using 1:($2*1.6*1e-1) title "grad_od" with lines, \
+",,f4.data" using 1:($2*1e-1) title "grad_od" with lines, \
 ",,f1.data.deriv" using 1:($2*1e-1) title "grad_od real" with lines
 # ",,f0.data" title "o_d", \
 # ",,f5.data" using 1:($2*1e-2) title "grad_d", \
