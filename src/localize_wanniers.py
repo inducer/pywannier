@@ -51,17 +51,30 @@ def addTuple(t1, t2):
 
 # bands to use in computation
 n_bands = 6 #len(bands)
+dimensions = 2
 
-k_grid_index_increments = [tuple(i) 
-                           for i in tools.enumerateBasicDirections(2)]
-k_grid_increments = [crystal.KGrid[kgi] - crystal.KGrid[0,0]
-                     for kgi in k_grid_index_increments]
-def computeKWeights(k_grid_increments):
-    pass
+k_grid_index_increments = []
+for i in range(dimensions):
+    direction = [0.] * dimensions
+    direction[i] = 1
+    k_grid_index_increments.append(tuple(direction))
+    direction = [0.] * dimensions
+    direction[i] = -1
+    k_grid_index_increments.append(tuple(direction))
 
-k_weights = computeKWeights(k_grid_increments)
-k_weights = [1/(2. * mtools.norm2squared(kgi))
+k_grid_increments = [crystal.KGrid[kgii] - crystal.KGrid[0,0]
+                     for kgii in k_grid_index_increments]
+
+k_weights = [0.5 / mtools.norm2squared(kgi)
              for kgi in k_grid_increments]
+
+# verify k_weights
+for i in range(dimensions):
+    for j in range(dimensions):
+        my_sum = 0
+        for kgi_index, kgi in enumerate(k_grid_increments):
+            my_sum += k_weights[kgi_index]*kgi[i]*kgi[j]
+        assert my_sum == tools.delta(i, j)
 
 # corresponds to M in Marzari's paper.
 # indexed by k_index and an index into k_grid_index_increments
@@ -81,8 +94,9 @@ for ii in crystal.KGrid.innerIndices():
 job.done()
 
 # minimization algorithm ------------------------------------
+# FIXME -> gridBlockIndices, wraparound
 gradient = {}
-N = 8 # ???
+N = len(list(crystal.KGrid.innerIndices()))
 
 k_weight_sum = sum(k_weights)
 alpha = 1
@@ -99,10 +113,10 @@ while True:
     job = fempy.stopwatch.tJob("updating scalar products")
     current_scalar_products = {}
     for ii in crystal.KGrid.innerIndices():
-        for kgii_index, kgii in enumerate(k_grid_index_increments):
-            current_scalar_products[ii,kgii] = mm(
-                mix_matrix[ii, kgii], mm(scalar_products[ii, kgii], 
-                                         num.hermite(mix_matrix[ii, kgii])))
+        for kgii in k_grid_index_increments:
+            current_scalar_products[ii, kgii] = mm(
+                num.hermite(mix_matrix[ii, kgii]), mm(scalar_products[ii, kgii], 
+                                         mix_matrix[ii, kgii]))
     job.done()
 
     job = fempy.stopwatch.tJob("computing wannier centers")
@@ -111,12 +125,13 @@ while True:
         result = num.zeros((2,), num.Complex)
         for ii in crystal.KGrid.innerIndices():
             for kgii_index, kgii in enumerate(k_grid_index_increments):
-                result += k_weights[kgii_index] \
+                result -= k_weights[kgii_index] \
                           * num.asarray(k_grid_increments[kgii_index], num.Complex) \
                           * cmath.log(scalar_products[ii, kgii][n,n]).imag
+        result /= N
+        print n, result
         wannier_centers.append(result)
     job.done()
-
 
     job = fempy.stopwatch.tJob("computing gradient")
     for ii in crystal.KGrid.innerIndices():
@@ -148,6 +163,3 @@ while True:
 
     print gradient_norm
     iteration += 1
-
-
-
