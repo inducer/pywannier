@@ -11,7 +11,7 @@ import eigenmodes
 import lattice
 
 job = fempy.stopwatch.tJob("loading")
-my_lattice, my_grid, my_eigenmodes = cPickle.load(file(",,eigenmodes.pickle", "rb"))
+my_eigenmodes = cPickle.load(file(",,eigenmodes.pickle", "rb"))
 job.done()
 
 eigenmodes.writeBandDiagram(",,band_diagram.data", my_eigenmodes)

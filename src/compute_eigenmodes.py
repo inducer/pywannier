@@ -95,16 +95,16 @@ def computeFloquetBCs(periodicity_nodes, k):
 
 
 
-def computeEigenmodes(mesh, epsilon, sigma, keys, ks_of_keys, lattice):
+def computeEigenmodes(mesh, epsilon, sigma, keys, k_grid, lattice):
   periodicity_nodes = findPeriodicityNodes(mesh, lattice.DirectLatticeBasis)
 
   eigensolver = fempy.solver.tLaplacianEigenproblemSolver(mesh, 
                                                           g = epsilon, 
                                                           typecode = num.Complex)
 
-  results = eigenmodes.tEigenmodes(mesh)
+  results = eigenmodes.tEigenmodes(lattice, mesh, k_grid)
   for key in keys:
-    k = ks_of_keys[key]
+    k = k_grid[key]
     print "computing for k =", k
     my_periodicity_nodes = computeFloquetBCs(periodicity_nodes, k)
     eigensolver.addPeriodicBoundaryConditions(my_periodicity_nodes)
@@ -162,9 +162,9 @@ def computeEigenmodesForStandardUnitCell(lattice, inner_radius):
 def main():
   a = 1.
   my_lattice = lattice.tLattice([a*num.array([1,0], num.Float), a*num.array([0,1], num.Float)])
-  grid_of_ks, my_eigenmodes = computeEigenmodesForStandardUnitCell(my_lattice, a*0.18)
+  my_eigenmodes = computeEigenmodesForStandardUnitCell(my_lattice, a*0.18)
   job = fempy.stopwatch.tJob("saving")
-  cPickle.dump((my_lattice, grid_of_ks, my_eigenmodes), file(",,eigenmodes.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
+  cPickle.dump(my_eigenmodes, file(",,eigenmodes.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
   job.done()
 
 main()
