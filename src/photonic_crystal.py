@@ -80,10 +80,11 @@ class tBravaisLattice:
 
 
 class tPhotonicCrystal:
-    def __init__(self, lattice, mesh, k_grid, has_inversion_symmetry, 
+    def __init__(self, lattice, mesh, boundary, k_grid, has_inversion_symmetry, 
                  epsilon):
         self.Lattice = lattice
         self.Mesh = mesh
+        self.BoundaryShapeSection = boundary
         self.KGrid = k_grid
         self.HasInversionSymmetry = has_inversion_symmetry
         self.Epsilon = epsilon
@@ -212,7 +213,7 @@ def makeKPeriodicLookupStructure(k_grid, dictionary = {}):
 
 
 
-def findPeriodicityNodes(mesh, grid_vectors):
+def findPeriodicityNodes(mesh, boundary, grid_vectors, order = 2):
     bnodes = [node 
               for node in mesh.dofManager()
               if node.TrackingId == "floquet"]
@@ -223,6 +224,9 @@ def findPeriodicityNodes(mesh, grid_vectors):
     for node in bnodes:
         for gv in grid_vectors:
             ideal_point = node.Coordinates + gv
+            if not boundary.containsPoint(ideal_point):
+                continue
+
             dist_threshold = tools.norm2(gv) * 0.3
 
             close_nodes_with_dists = filter(
@@ -241,32 +245,36 @@ def findPeriodicityNodes(mesh, grid_vectors):
                 periodicity_nodes[node] = (gv, [(other_node, 1)])
             else:
                 if len(close_nodes_with_dists) == 1:
-                    print "WARNING: Found only one node that's near enough."
+                    print "WARNING: Found just one near node. Bummer.."
                     continue
 
-                other_node_a, dist_a = close_nodes_with_dists[0]
-                other_node_b = None
-
-                for candidate_b, dist in close_nodes_with_dists[1:]:
-                    if tools.angleCosineBetweenVectors(other_node_a.Coordinates - ideal_point,
-                                                       candidate_b.Coordinates - ideal_point) < -0.1:
-                        other_node_b = candidate_b
-                        dist_b = dist
-            
-                if other_node_b is None:
-                    continue
-
-                for candidate_b, dist in close_nodes_with_dists[1:]:
-                    if tools.angleCosineBetweenVectors(other_node_a.Coordinates - ideal_point,
-                                                       candidate_b.Coordinates - ideal_point) < -0.1:
-                        other_node_b = candidate_b
-                        dist_b = dist
+                first_other_node, dummy = close_nodes_with_dists[0]
+                first_other_co = first_other_node.Coordinates
+                direction = first_other_co - ideal_point
+                
+                other_nodes_with_alpha = [(first_other_node, 1.)]
+                for candidate, dist in close_nodes_with_dists[1:]:
+                    dtl, alpha = tools.distanceToLine(ideal_point, direction, candidate.Coordinates)
+                    if dtl < 1e-5:
+                        other_nodes_with_alpha.append((candidate, alpha))
+                    if len(other_nodes_with_alpha) >= order+1:
                         break
-                total_dist = dist_a + dist_b
-                periodicity_nodes[node] = \
-                                        (gv, 
-                                         [(other_node_a, dist_a/total_dist),
-                                          (other_node_b, dist_b/total_dist)])
+
+                if len(other_nodes_with_alpha) < order+1:
+                    print "WARNING: Found an insufficient number of near nodes, degraded approximation."
+
+                icoeffs = mtools.findInterpolationCoefficients(
+                    num.array([alpha for dummy, alpha in other_nodes_with_alpha], num.Float),
+                    0.)
+
+                nodes_with_icoeffs = [(other_node, icoeff) 
+                                      for icoeff, (other_node, alpha) 
+                                      in zip(icoeffs, other_nodes_with_alpha)]
+
+                #print "DID SOMETHING!", ideal_point
+                #for other_node, icoeff in nodes_with_icoeffs:
+                    #print icoeff, other_node.Coordinates
+                periodicity_nodes[node] = (gv, nodes_with_icoeffs)
     job.done()
 
     return periodicity_nodes
@@ -277,8 +285,8 @@ def findPeriodicityNodes(mesh, grid_vectors):
 def getFloquetConstraints(periodicity_nodes, k):
     constraints = {}
     for dependent_node, (gv, independent_nodes) in periodicity_nodes.iteritems():
-        floquet_factor = cmath.exp(-1j * num.innerproduct(gv, k))
         lincomb_specifier = []
+        floquet_factor = cmath.exp(-1j * num.innerproduct(gv, k))
         for independent_node, factor in independent_nodes:
             lincomb_specifier.append((factor * floquet_factor, independent_node))
         constraints[dependent_node] = 0, lincomb_specifier
@@ -668,12 +676,14 @@ def generateSquareMeshWithRodCenter(lattice, inner_radius, coarsening_factor = 1
         else:
             return area >= 1e-2 * coarsening_factor
 
-    geometry = [fempy.mesh.tShapeSection(
-        fempy.geometry.getParallelogram(lattice.DirectLatticeBasis), constraint_id),
+    boundary = fempy.mesh.tShapeSection(
+        fempy.geometry.getParallelogram(lattice.DirectLatticeBasis), constraint_id)
+    geometry = [boundary,
                 fempy.mesh.tShapeSection(
         fempy.geometry.getCircle(inner_radius, use_exact), None)]
 
-    return fempy.mesh.tTwoDimensionalMesh(geometry, refinement_func = needsRefinement)
+    return fempy.mesh.tTwoDimensionalMesh(
+        geometry, refinement_func = needsRefinement), boundary
 
 
 

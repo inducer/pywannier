@@ -22,6 +22,7 @@ import photonic_crystal as pc
 
 def computeEigenmodes(crystal, sigma):
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
+                                                crystal.BoundaryShapeSection,
                                                 crystal.Lattice.DirectLatticeBasis)
 
     eigensolver = fempy.solver.tLaplacianEigenproblemSolver(crystal.Mesh, 
@@ -53,9 +54,10 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
                                          coarsening_factor = 1):
 
     job = fempy.stopwatch.tJob("geometry")
-    mesh = pc. generateSquareMeshWithRodCenter(lattice, 
-                                               inner_radius = inner_radius,
-                                               coarsening_factor = coarsening_factor)
+    mesh, boundary = pc. generateSquareMeshWithRodCenter(
+        lattice, 
+        inner_radius = inner_radius,
+        coarsening_factor = coarsening_factor)
     job.done()
 
     fempy.visualization.writeGnuplotMesh(mesh, ",,mesh.data")
@@ -75,9 +77,13 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
     k_grid  = tools.makeCellCenteredGrid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
                                         [(0, k_grid_points)] * 2)
 
+    
     crystals = []
+
+    max_area = 2e-4 * coarsening_factor
     while len(crystals) <= refine_steps:
         print "have %d elements" % len(mesh.elements())
+        fempy.visualization.writeGnuplotMesh(mesh, ",,mesh.data")
         
         if has_inversion_symmetry:
             mode_dict = tools.tDependentDictionary(
@@ -86,7 +92,7 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
             mode_dict = pc.makeKPeriodicLookupStructure(k_grid)
 
         crystal = pc.tPhotonicCrystal(lattice, 
-                                      mesh, 
+                                      mesh, boundary,
                                       k_grid, 
                                       has_inversion_symmetry = has_inversion_symmetry, 
                                       epsilon = epsilon)
@@ -98,9 +104,11 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
 
         if len(crystals) <= refine_steps:
             job = fempy.stopwatch.tJob("refining")
-            mesh_change = mesh.getRefinement(lambda x: True)
+            mesh_change = mesh.getRefinement(lambda el: el.area() > max_area)
             job.done()
             mesh = mesh_change.meshAfter()
+
+        max_area *= 0.8
 
     return crystals
 
@@ -122,9 +130,9 @@ def run():
     crystals = computeEigenmodesForStandardUnitCell(my_lattice, 
                                                     epsilon,
                                                     a*inner_radius,
-                                                    refine_steps = 0, # 4
-                                                    coarsening_factor = 1,
-                                                    k_grid_points = 8)
+                                                    refine_steps = 6, # 4
+                                                    coarsening_factor = 20,
+                                                    k_grid_points = 4)
 
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)

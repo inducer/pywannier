@@ -34,8 +34,8 @@ def verifyEigenmodes(crystal, spc):
         eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, k))
         for i, (evalue, emode) in enumerate(crystal.Modes[k_index]):
             err = eigensolver.computeEigenpairResidual(evalue, emode) / spc(emode, emode)
-            print i, k_index, err
-            #assert eigensolver.computeEigenpairResidual(evalue, emode) < 1e-9
+            #print i, k_index, err
+            assert eigensolver.computeEigenpairResidual(evalue, emode) < 1e-9
 
 def run():
     job = fempy.stopwatch.tJob("loading")
@@ -43,6 +43,7 @@ def run():
     job.done()
 
     for crystal in crystals:
+        print crystal
         spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
                                                           crystal.MassMatrix)
         verifyEigenmodes(crystal, spc)

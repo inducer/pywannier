@@ -15,6 +15,7 @@ import fempy.tools as tools
 import fempy.integration
 import fempy.mesh_function
 import fempy.visualization as visualization
+import fempy.spatial_btree as spatial_btree
 
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
@@ -36,8 +37,8 @@ def getBCResidual(mode, node1, node2, k, pnodes):
 
         def fii(point):
             return tools.absSquared(
-                floquet_factor * sp(mode.getGradient(point + gv), gv)
-                - sp(mode.getGradient(point), gv))
+                 sp(mode.getGradient(point + gv), gv)
+                - sp(floquet_factor * mode.getGradient(point), gv))
         result = fempy.integration.integrateAlongLine(
             node1.Coordinates, node2.Coordinates, fii)
         return result
@@ -45,9 +46,13 @@ def getBCResidual(mode, node1, node2, k, pnodes):
         return 0
 
 eoc_rec = fempy.eoc.tEOCRecorder()
-for crystal in crystals[0:3]:
+for crystal in crystals:
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
+                                                crystal.BoundaryShapeSection,
                                                 crystal.Lattice.DirectLatticeBasis)
+
+    visualization.writeGnuplotMesh(crystal.Mesh, ",,mesh.data")
+
     b_edges = fempy.mesh.getBoundaryEdges(crystal.Mesh)
 
     boundary_error = 0.
@@ -62,4 +67,5 @@ for crystal in crystals[0:3]:
     eoc_rec.addDataPoint(len(crystal.Mesh.elements())**0.5,
                          boundary_error ** 0.5)
 
-print "Boundary normal derivative EOC:", eoc_rec.estimateOrderOfConvergence()[1]
+print "Boundary normal derivative EOC:", eoc_rec.estimateOrderOfConvergence()
+eoc_rec.writeGnuplotFile(",,boundary_eoc.data")

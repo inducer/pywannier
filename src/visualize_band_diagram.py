@@ -44,7 +44,7 @@ class t1DProblem:
         m = num.asarray(m, s.typecode(), num.DenseMatrix)
         total_s = mm(a, mm(s, num.hermite(a)))
         total_m = mm(a, mm(m, num.hermite(a)))
-        return mtools.estimateConditionNumber(total_m)
+        return mtools.estimateConditionNumber(total_s), mtools.estimateConditionNumber(total_s, 1)
 
     def getEigenvalues(self, k):
         rl = self.Lattice.ReciprocalLattice
@@ -99,7 +99,7 @@ class t2DProblem:
         pairs.sort(lambda (e1, m1), (e2, m2): cmp(abs(e1), abs(e2)))
         return [evalue for evalue, em in pairs]
 
-problem = t2DProblem()
+problem = t1DProblem()
 k_track = tools.interpolateVectorList(problem.kTrack(), 49)
 
 def scale_eigenvalue(ev):
@@ -107,8 +107,11 @@ def scale_eigenvalue(ev):
 
 if raw_input("write condition file? [n]") == "y":
     condfile = file(",,condition_k.data", "w")
+    effcondfile = file(",,eff_condition_k.data", "w")
     for j,k in enumerate(k_track):
-        condfile.write("%f\t%f\n" % (k_track[j][0], problem.getConditionNumber(k)))
+        cond, effcond = problem.getConditionNumber(k)
+        condfile.write("%f\t%f\n" % (k_track[j][0], cond))
+        effcondfile.write("%f\t%f\n" % (k_track[j][0], effcond))
 
 bdfile = file(",,band_diagram.data", "w")
 evlists = [problem.getEigenvalues(k) for k in k_track]
