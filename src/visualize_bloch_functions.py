@@ -25,7 +25,7 @@ import photonic_crystal as pc
 
 
 job = fempy.stopwatch.tJob("loading")
-crystals = pickle.load(file(",,crystal.pickle", "rb"))
+crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
 crystal = crystals[0]
@@ -33,16 +33,12 @@ crystal = crystals[0]
 node_number_assignment = crystal.Modes[0,0][0][1].numberAssignment()
 spc = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
                                                    crystal.ScalarProduct)
-pc.normalizeModes(crystal, spc)
-
-bands = pc.findBands(crystal)
-
 multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,
                                    limits = [(-2,2)] * 2)
 
 dlb = crystal.Lattice.DirectLatticeBasis
-for band_index, band in enumerate(bands):
+for band_index, band in enumerate(crystal.Bands):
     for k_index in crystal.KGrid:
         k = crystal.KGrid[k_index]
         break_k = False
@@ -64,8 +60,8 @@ for band_index, band in enumerate(bands):
                     if value == "p":
                         my_mode = cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
                     else:
-                        my_mode = pc.periodicizeMeshFunction(band[k_index][1], k)
-                    f_on_grid[multicell_index] = my_mode.real
+                        my_mode = crystal.PeriodicBands[band_index][k_index][1]
+                    f_on_grid[multicell_index] = my_mode.imaginary
                 pc.visualizeGridFunction(multicell_grid, f_on_grid)
 
         if break_k:

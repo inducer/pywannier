@@ -42,7 +42,7 @@ def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
                                                    tolerance = 1e-10)
 
     # make sure our symmetry lookups work
-    for k_index in k_grid:
+    for k_index in k_grid.enlargeAtBothBoundaries():
         eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, 
                                                               k_grid[k_index]))
         for evalue, emode in crystal.Modes[k_index]:

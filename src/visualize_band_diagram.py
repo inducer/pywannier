@@ -19,19 +19,15 @@ import photonic_crystal as pc
 
 
 job = fempy.stopwatch.tJob("loading")
-crystals = pickle.load(file(",,crystal.pickle", "rb"))
+crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
-crystal = crystals[0]
-
-job = fempy.stopwatch.tJob("localizing bands")
-bands = pc.findBands(crystal)
-job.done()
+crystal = crystals[-1]
 
 rl = crystal.Lattice.ReciprocalLattice
 k_track = [0*rl[0],
            0.5*rl[0],
            0.5*(rl[0]+rl[1]),
            0*rl[0]]
-pc.writeBandDiagram(",,band_diagram.data", crystal, bands,
+pc.writeBandDiagram(",,band_diagram.data", crystal, crystal.Bands,
                     tools.interpolateVectorList(k_track, 30))
