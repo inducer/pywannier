@@ -262,15 +262,24 @@ def minimizeByGradientDescent(x, f, grad, x_plus_alpha_grad, step):
         pass
     return start
 
-def minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp):
+def minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None):
     # from Shewchuk's paper, p. 48
     # Polak-Ribi`ere with implicit restart
+
 
     d = last_r = -grad(x)
     observer = iteration.makeObserver(min_change = 1e-5, max_unchanged = 3)
     observer.reset()
 
     last_fval = f(x)
+
+    if log_filenames is not None:
+        target_log = file(log_filenames[0], "w")
+        step_log = file(log_filenames[1], "w")
+        step_count = 0
+
+        target_log.write("%d\t%f\n" % (step_count, last_fval))
+
     try:
         while True:
             def minfunc(alpha):
@@ -287,6 +296,12 @@ def minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp):
             beta = max(0, sp(r, r - last_r)/sp(last_r, last_r))
             d = r + beta * d
             last_r = r
+
+            if log_filenames is not None:
+                step_log.write("%d\t%f\n" % (step_count, alpha))
+                step_count += 1
+                target_log.write("%d\t%f\n" % (step_count, last_fval))
+
     except iteration.tIterationStalled:
         pass
     except iteration.tIterationStopped:
@@ -311,7 +326,8 @@ def minimizeByFixedStep(x, f, grad, x_plus_alpha_grad, step, sp):
             d = -grad(x)
     except iteration.tIterationStalled:
         print "Continuing with fine-grained CG"
-        return minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp)
+        return minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp, 
+                            (",,cg_target_log.data", ",,cg_step_log.data"))
     except iteration.tIterationStopped:
         pass
     return x
@@ -630,6 +646,37 @@ class tMarzariSpreadMinimizer:
             gradient[k_index] = result
         return gradient
 
+    def spreadFunctionalGradientMarzariOmegaOD(self, n_bands, scalar_products, arg, wannier_centers = None):
+        ### WRONG!!! DELETE ME!
+        if wannier_centers is None:
+            wannier_centers = self.wannierCenters(n_bands, scalar_products, arg)
+
+        gradient = tDictionaryOfMatrices()
+        for k_index in self.Crystal.KGrid:
+            result = num.zeros((n_bands, n_bands), num.Complex)
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                if scalar_products[k_index, kgii] is None:
+                    continue
+
+                m = scalar_products[k_index, kgii]
+                m_diagonal = num.diagonal(m)
+
+                # Omega_OD part
+                r = num.multiply(num.hermite(m), m_diagonal)
+
+                if self.DebugMode:
+                    r2 = num.zeros((n_bands, n_bands), num.Complex)
+                    for i in range(n_bands):
+                        for j in range(n_bands):
+                            r2[i,j] = m[j,i].conjugate() * m[j,j]
+                    assert mtools.frobeniusNorm(r-r2) < 1e-15
+
+                result += -2. * self.KWeights.KWeights[kgii_index] * \
+                          (r-num.hermite(r))
+            gradient[k_index] = result
+        return gradient
+        ### WRONG!!! DELETE ME!
+
     def spreadFunctionalGradientOmegaOD(self, n_bands, scalar_products, arg, wannier_centers = None):
         if wannier_centers is None:
             wannier_centers = self.wannierCenters(n_bands, scalar_products, arg)
@@ -705,6 +752,52 @@ class tMarzariSpreadMinimizer:
 
             gradient[k_index] = result
         return gradient
+
+    def spreadFunctionalGradientMarzariOmegaD(self, n_bands, scalar_products, arg, wannier_centers = None):
+        ### WRONG!!! DELETE ME!
+        if wannier_centers is None:
+            wannier_centers = self.wannierCenters(n_bands, scalar_products, arg)
+
+        gradient = tDictionaryOfMatrices()
+        for k_index in self.Crystal.KGrid:
+            result = num.zeros((n_bands, n_bands), num.Complex)
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                if scalar_products[k_index, kgii] is None:
+                    continue
+
+                m = scalar_products[k_index, kgii]
+                m_diagonal = num.diagonal(m)
+
+                # Omega_D part
+                r_tilde = num.divide(num.hermite(m), num.conjugate(m_diagonal))
+
+                if self.DebugMode:
+                    r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
+                    for i in range(n_bands):
+                        for j in range(n_bands):
+                            r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
+                    assert mtools.frobeniusNorm(r_tilde-r_tilde2) < 1e-13
+
+                q = num.zeros((n_bands,), num.Complex)
+                for n in range(n_bands):
+                    q[n] = arg(m_diagonal[n], (k_index, kgii, n))
+
+                for n in range(n_bands):
+                    q[n] += mtools.sp(self.KWeights.KGridIncrements[kgii_index], 
+                                      wannier_centers[n])
+                t = num.multiply(r_tilde, q)
+                if self.DebugMode:
+                    t2 = num.zeros((n_bands, n_bands), num.Complex)
+                    for i in range(n_bands):
+                        for j in range(n_bands):
+                            t2[i,j] = r_tilde[i,j] * q[j]
+                    assert mtools.frobeniusNorm(t-t2) < 1e-15
+
+                result += -2. * self.KWeights.KWeights[kgii_index] * \
+                          (t+num.hermite(t))
+            gradient[k_index] = result
+        return gradient
+        ### WRONG!!! DELETE ME!
 
     def getMixMatrix(self, prev_mix_matrix, factor, gradient):
         mm = num.matrixmultiply
@@ -932,6 +1025,12 @@ class tMarzariSpreadMinimizer:
                     temp_mix_matrix = self.getMixMatrix(mix_matrix, x, gradient)
                     temp_sps = self.updateOffsetScalarProducts(orig_sps, temp_mix_matrix)
 
+                    marz_grad_od = self.spreadFunctionalGradientMarzariOmegaOD(len(pbands), temp_sps, arg)
+                    marz_grad_d = self.spreadFunctionalGradientMarzariOmegaD(len(pbands), temp_sps, arg)
+                    marz_sp_od = kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, marz_grad_od, gradient)
+                    marz_sp_d = kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, marz_grad_d, gradient)
+                    marz_sp = marz_sp_od + marz_sp_d
+
                     new_grad_od = self.spreadFunctionalGradientOmegaOD(len(pbands), temp_sps, arg)
                     new_grad_d = self.spreadFunctionalGradientOmegaD(len(pbands), temp_sps, arg)
                     sp_od = kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, new_grad_od, gradient)
@@ -941,7 +1040,7 @@ class tMarzariSpreadMinimizer:
                     oi_here = self.omegaI(len(pbands), temp_sps)
                     od = self.omegaD(len(pbands), temp_sps, arg)
                     ood = self.omegaOD(temp_sps)
-                    return od, oi_here+ood, oi_here+od+ood, sp, sp_od, sp_d
+                    return oi_here+od+ood, sp, marz_sp
                            
                 step = 0.5/(4*sum(self.KWeights.KWeights))
 
@@ -991,7 +1090,8 @@ class tMarzariSpreadMinimizer:
         return minimizeByCG(tDictionaryOfMatrices(mix_matrix), 
                             f, grad, self.getMixMatrix,
                             step = 0.5/(4*sum(self.KWeights.KWeights)),
-                            sp = sp)
+                            sp = sp,
+                            log_filenames = (",,cg_target_log.data", ",,cg_step_log.data"))
 
 def computeMixedBands(crystal, bands, mix_matrix):
     # WARNING! Don't be tempted to insert symmetry code in here, since
@@ -1168,8 +1268,8 @@ def run():
     print "Gaps:", gaps
     print "Clusters:", clusters
 
-    bands = crystal.Bands[1:6]
-    pbands = crystal.PeriodicBands[1:6]
+    bands = crystal.Bands[1:4]
+    pbands = crystal.PeriodicBands[1:4]
 
     job = fempy.stopwatch.tJob("guessing initial mix")
     mix_matrix = guessInitialMixMatrix(crystal, 
@@ -1178,13 +1278,13 @@ def run():
     job.done()
 
     minimizer = tMarzariSpreadMinimizer(crystal, sp, debug_mode, interactivity_level)
-    mix_matrix = minimizer.minimizeSpread2(pbands, mix_matrix)
+    mix_matrix = minimizer.minimizeSpread(pbands, mix_matrix)
 
     mixed_bands = computeMixedBands(crystal, bands, mix_matrix)
 
     wannier_grid = tools.tFiniteGrid(origin = num.array([0.,0.]),
                                      grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                     limits = [(-3,3)] * 2)
+                                     limits = [(-1,2)] * 2)
 
     wanniers = computeWanniers(crystal, mixed_bands, wannier_grid)
 

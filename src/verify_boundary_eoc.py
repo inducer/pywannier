@@ -46,7 +46,7 @@ def getBCResidual(mode, node1, node2, k, pnodes):
         return 0
 
 eoc_rec = fempy.eoc.tEOCRecorder()
-for crystal in crystals:
+for crystal in crystals[:]:
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
                                                 crystal.BoundaryShapeSection,
                                                 crystal.Lattice.DirectLatticeBasis)

@@ -130,9 +130,9 @@ def run():
     crystals = computeEigenmodesForStandardUnitCell(my_lattice, 
                                                     epsilon,
                                                     a*inner_radius,
-                                                    refine_steps = 6, # 4
-                                                    coarsening_factor = 20,
-                                                    k_grid_points = 4)
+                                                    refine_steps = 0, # 4
+                                                    coarsening_factor = 1,
+                                                    k_grid_points = 8)
 
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
