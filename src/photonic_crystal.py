@@ -2,10 +2,36 @@ import math
 import cmath
 import fempy.tools as tools
 import fempy.stopwatch
+import fempy.mesh_function
 
 # Numeric imports -------------------------------------------------------------
 import pylinear.matrices as num
 import pylinear.linear_algebra as la
+
+
+
+
+class tStepFunction:
+    def __init__(self, left_value, step_at, right_value):
+        self.LeftValue = left_value
+        self.StepAt = step_at
+        self.RightValue = right_value
+
+    def __call__(self, x):
+        if x < self.StepAt:
+            return self.LeftValue
+        else:
+            return self.RightValue
+
+
+
+
+class tCircularFunctionRemapper:
+    def __init__(self, f):
+        self.Function = f
+
+    def __call__(self, x):
+        return self.Function(tools.norm2(x))
 
 
 
@@ -41,12 +67,15 @@ class tBravaisLattice:
 
 
 class tPhotonicCrystal:
-    def __init__(self, lattice, mesh, k_grid, has_inversion_symmetry, modes_start = {}):
+    def __init__(self, lattice, mesh, k_grid, has_inversion_symmetry, 
+                 epsilon, modes_start = {}):
         self.Lattice = lattice
         self.Mesh = mesh
         self.KGrid = k_grid
         self.HasInversionSymmetry = has_inversion_symmetry
         self.Modes = modes_start.copy()
+        self.Epsilon = epsilon
+        self.ScalarProduct = None
 
 
 
@@ -58,8 +87,8 @@ class tInvertedModeLookerUpper:
     def __call__(self, dictionary, failed_key):
         new_key = tuple(map(lambda (idx, count): count-idx, 
                             zip(failed_key, self._GridIntervalCounts)))
-        eigenvalue, eigenvector = dictionary[new_key]
-        return (eigenvalue.conjugate(), num.conjugate(eigenvector))
+        eigenvalue, eigenmode = dictionary[new_key]
+        return (eigenvalue.conjugate(), eigenmode.conjugate())
 
 
 
@@ -73,15 +102,16 @@ class tInvertedModeListLookerUpper:
                             zip(failed_key, self._GridIntervalCounts)))
         modelist = dictionary[new_key]
         return tools.tFakeList(lambda i: (modelist[i][0].conjugate(),
-                                          num.conjugate(modelist[i][1])),
+                                          modelist[i][1].conjugate()),
                                len(modelist))
 
 
 
 
 def findPeriodicityNodes(mesh, grid_vectors):
-    bnodes = filter(lambda node: node.ConstraintId == "floquet",
-                    mesh.dofManager().constrainedNodes())
+    bnodes = [node 
+              for node in mesh.dofManager()
+              if node.TrackingId == "floquet"]
     
     job = fempy.stopwatch.tJob("periodicity")
 
@@ -128,7 +158,7 @@ def findPeriodicityNodes(mesh, grid_vectors):
                         other_node_b = candidate_b
                         dist_b = dist
                         break
-                    total_dist = dist_a + dist_b
+                total_dist = dist_a + dist_b
                 periodicity_nodes.append(
                     (gv, node,
                      [(other_node_a, dist_a/total_dist),
@@ -140,15 +170,15 @@ def findPeriodicityNodes(mesh, grid_vectors):
 
 
 
-def computeFloquetBCs(periodicity_nodes, k):
-    result = []
-    for gv, node, other_nodes in periodicity_nodes:
+def getFloquetConstraints(periodicity_nodes, k):
+    constraints = {}
+    for gv, dependent_node, independent_nodes in periodicity_nodes:
         floquet_factor = cmath.exp(-1j * num.innerproduct(gv, k))
-        my_condition = [(node,1)]
-        for other_node, factor in other_nodes:
-            my_condition.append((other_node, -factor*floquet_factor))
-        result.append(my_condition)
-    return result
+        lincomb_specifier = []
+        for independent_node, factor in independent_nodes:
+            lincomb_specifier.append((factor * floquet_factor, independent_node))
+        constraints[dependent_node] = 0, lincomb_specifier
+    return constraints
 
 
 
@@ -249,7 +279,7 @@ def visualizeBandsGnuplot(filename, crystal, bands):
     out_file = file(filename, "w")
 
     def scale_eigenvalue(ev):
-        return math.sqrt(ev.real) / (2 * math.pi)
+        return math.sqrt(abs(ev)) / (2 * math.pi)
 
     def writePoint(key):
         spot = k_grid[key]
@@ -277,7 +307,7 @@ def visualizeBandsVTK(filename, crystal, bands):
     quads = []
 
     def scale_eigenvalue(ev):
-        return math.sqrt(ev.real) / (2 * math.pi)
+        return math.sqrt(abs(ev)) / (2 * math.pi)
 
     def makeNode(key):
         node_number = len(nodes)
@@ -297,7 +327,7 @@ def visualizeBandsVTK(filename, crystal, bands):
         node_lookup = {}
         for k_index in k_grid:
             makeNode(k_index)
-        k_grid.forEachBlock(makeQuad)
+        k_grid.forEachGridBlock(makeQuad)
 
     structure = pyvtk.PolyData(points = nodes, polygons = quads)
     vtk = pyvtk.VtkData(structure, "Bands")
@@ -320,16 +350,26 @@ def writeEigenvalueLocusPlot(filename, crystal, bands, k_points):
 
 def writeBandDiagram(filename, crystal, bands, k_vectors):
     def scale_eigenvalue(ev):
-        return math.sqrt(ev.real) / (2 * math.pi)
+        return math.sqrt(abs(ev)) / (2 * math.pi)
 
     k_grid = crystal.KGrid
     band_diagram_file = file(filename, "w")
-    for band in bands:
+    for i,band in enumerate(bands):
         for index, k in enumerate(k_vectors):
             value = 0.j
-            for weight, neighbor in k_grid.interpolateGridPointIndex(k):
+            k_interp_info = k_grid.interpolateGridPointIndex(k)
+            for weight, neighbor in k_interp_info:
                 value += weight * band[neighbor][0]
 
-            band_diagram_file.write("%d\t%f\n" % 
-                                        (index, scale_eigenvalue(value)))
+            next_band_value = 0.j
+            if i + 1 < len(bands):
+                for weight, neighbor in k_interp_info:
+                    next_band_value += weight * bands[i+1][neighbor][0]
+            dist = 0.5 / (2*math.pi) * \
+                   abs(cmath.sqrt(value) - cmath.sqrt(next_band_value))
+
+            band_diagram_file.write("%d\t%f\t%f\n" % 
+                                        (index, 
+                                         scale_eigenvalue(value),
+                                         dist))
         band_diagram_file.write("\n")
