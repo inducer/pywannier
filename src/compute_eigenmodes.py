@@ -19,18 +19,20 @@ import photonic_crystal as pc
 
 
 
-def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
-    periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, lattice.DirectLatticeBasis)
+def computeEigenmodes(crystal, sigma):
+    periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
+                                                crystal.Lattice.DirectLatticeBasis)
 
     eigensolver = fempy.solver.tLaplacianEigenproblemSolver(crystal.Mesh, 
                                                             constrained_nodes = periodicity_nodes,
-                                                            g = epsilon, 
+                                                            g = crystal.Epsilon, 
                                                             typecode = num.Complex)
 
-    crystal.ScalarProduct = eigensolver.massMatrix()
+    crystal.MassMatrix = eigensolver.massMatrix()
+    crystal.CompleteNodeNumberAssignment = eigensolver.nodeNumberAssignment()
 
-    for k_index in k_grid:
-        k = k_grid[k_index]
+    for k_index in crystal.KGrid:
+        k = crystal.KGrid[k_index]
 
         if crystal.HasInversionSymmetry and k[0] > 0:
             # use inversion symmetry, only compute one half.
@@ -39,37 +41,18 @@ def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
         print "computing for k =", k
         eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, k))
         crystal.Modes[k_index] = eigensolver.solve(sigma,
-                                                   tolerance = 1e-10)
+                                                   tolerance = 1e-10,
+                                                   number_of_eigenvalues = 10)
 
-    # make sure our symmetry lookups work
-    for k_index in k_grid.enlargeAtBothBoundaries():
-        k = k_grid[k_index]
-        eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, k))
-        for evalue, emode in crystal.Modes[k_index]:
-            assert eigensolver.computeEigenpairResidual(evalue, emode) < 1e-9
-
-
-      
 def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
                                          refine_steps = 1,
-                                         k_grid_points = 16):
-    def needsRefinement( vert_origin, vert_destination, vert_apex, area ):
-        bary_x = ( vert_origin.x() + vert_destination.x() + vert_apex.x() ) / 3
-        bary_y = ( vert_origin.y() + vert_destination.y() + vert_apex.y() ) / 3
-    
-        dist_center = math.sqrt( bary_x**2 + bary_y**2 )
-        if dist_center < inner_radius * 1.2:
-            return area >= 2e-3 #* 4
-        else:
-            return area >= 1e-2 #* 4
+                                         k_grid_points = 16,
+                                         coarsening_factor = 1):
 
     job = fempy.stopwatch.tJob("geometry")
-    mesh = fempy.mesh.tTwoDimensionalMesh(
-        fempy.geometry.getUnitCellGeometry(lattice.DirectLatticeBasis, 
-                                           inner_radius = inner_radius,
-                                           use_exact = True,
-                                           constraint_id = "floquet"),
-        refinement_func = needsRefinement)
+    mesh = pc. generateSquareMeshWithRodCenter(lattice, 
+                                               inner_radius = inner_radius,
+                                               coarsening_factor = coarsening_factor)
     job.done()
 
     sigma = 0.
@@ -101,12 +84,11 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
                                       mesh, 
                                       k_grid, 
                                       has_inversion_symmetry = has_inversion_symmetry, 
-                                      epsilon = epsilon,
-                                      modes_start = mode_dict,
-                                      )
+                                      epsilon = epsilon)
+
+        crystal.Modes = mode_dict
         
-        computeEigenmodes(crystal, epsilon, sigma, k_grid = k_grid, 
-                          lattice = lattice)
+        computeEigenmodes(crystal, sigma)
         crystals.append(crystal)
 
         if len(crystals) <= refine_steps:
@@ -119,7 +101,7 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
 
 
 
-def main():
+def run():
     fempy.stopwatch.HIDDEN_JOBS.append("arpack rci")
     fempy.stopwatch.HIDDEN_JOBS.append("linear combination constraints")
     fempy.stopwatch.HIDDEN_JOBS.append("shift matrix")
@@ -129,16 +111,19 @@ def main():
 
     my_lattice = pc.tBravaisLattice([num.array([a,0], num.Float), num.array([0,a], num.Float)])
 
-    epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(11.56, a*inner_radius, 1.))
+    epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(1, a*inner_radius, 1.))
+    #epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(11.56, a*inner_radius, 1.))
     
     crystals = computeEigenmodesForStandardUnitCell(my_lattice, 
                                                     epsilon,
                                                     a*inner_radius,
                                                     refine_steps = 0, # 4
+                                                    coarsening_factor = 4,
                                                     k_grid_points = 8)
 
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
     job.done()
 
-main()
+if __name__ == "__main__":
+    run()

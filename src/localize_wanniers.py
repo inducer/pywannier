@@ -231,15 +231,12 @@ class tMarzariSpreadMinimizer:
             for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
                 added_tuple = tools.addTuples(k_index, kgii)
 
-                if self.Crystal.KGrid.isWithinBounds(added_tuple):
-                    mat = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            mat[i,j] = self.ScalarProductCalculator(pbands[i][k_index][1], 
-                                                                    pbands[j][added_tuple][1])
-                    scalar_products[k_index, kgii] = mat
-                else:
-                    scalar_products[k_index, kgii] = None
+                mat = num.zeros((n_bands, n_bands), num.Complex)
+                for i in range(n_bands):
+                    for j in range(n_bands):
+                        mat[i,j] = self.ScalarProductCalculator(pbands[i][k_index][1], 
+                                                                pbands[j][added_tuple][1])
+                scalar_products[k_index, kgii] = mat
 
         self.checkScalarProducts(scalar_products)
         return scalar_products
@@ -267,17 +264,15 @@ class tMarzariSpreadMinimizer:
         for k_index in self.Crystal.KGrid:
             for kgii in self.KWeights.KGridIndexIncrements:
                 # simply ignore out-of-bounds points
-                added_tuple = tools.addTuples(k_index, kgii)
-                if self.Crystal.KGrid.isWithinBounds(added_tuple):
-                    assert mtools.unitarietyError(mix_matrix[k_index]) < 1e-8
-                    assert mtools.unitarietyError(mix_matrix[added_tuple]) < 1e-8
+                added_tuple = self.Crystal.KGrid.reducePeriodically(
+                    tools.addTuples(k_index, kgii))
+                assert mtools.unitarietyError(mix_matrix[k_index]) < 1e-8
+                assert mtools.unitarietyError(mix_matrix[added_tuple]) < 1e-8
 
-                    new_scalar_products[k_index, kgii] = mm(
-                        mix_matrix[k_index], 
-                        mm(scalar_products[k_index, kgii], 
-                           num.hermite(mix_matrix[added_tuple])))
-                else:
-                    new_scalar_products[k_index, kgii] = None
+                new_scalar_products[k_index, kgii] = mm(
+                    mix_matrix[k_index], 
+                    mm(scalar_products[k_index, kgii], 
+                       num.hermite(mix_matrix[added_tuple])))
         self.checkScalarProducts(new_scalar_products)
         return new_scalar_products
 
@@ -289,7 +284,7 @@ class tMarzariSpreadMinimizer:
         for k_index in self.Crystal.KGrid:
             for kgii in self.KWeights.KGridIndexIncrements:
                 if scalar_products[k_index, kgii] is None:
-                    continue
+                    raise RuntimeError, "None is actually used in scalar products"
 
                 added_tup = tools.addTuples(k_index, kgii)
                 neg_kgii = tools.negateTuple(kgii)
@@ -577,7 +572,7 @@ class tMarzariSpreadMinimizer:
             for kgii in self.KWeights.KGridIndexIncrements:
                 if sps_direct[k_index, kgii] is not None:
                     assert mtools.frobeniusNorm(sps_direct[k_index, kgii]
-                                                - sps_updated[k_index, kgii]) < 1e-9
+                                               - sps_updated[k_index, kgii]) < 1e-9
 
         arg = tContinuityAwareArg()
         sf1 = self.spreadFunctional(len(pbands), sps_updated, arg.copy())
@@ -755,9 +750,9 @@ def computeMixedPeriodicBands(crystal, pbands, mix_matrix):
         pband = {}
 
         for k_index in crystal.KGrid.enlargeAtBothBoundaries():
-            # set eigenvalue to 0 since there is no meaning attached to it
-            reduced_k_index = crystal.KGrid.reduceToClosest(k_index)
+            reduced_k_index = crystal.KGrid.reducePeriodically(k_index)
 
+            # set eigenvalue to 0 since there is no meaning attached to it
             pband[k_index] = 0.j, tools.linearCombination(mix_matrix[reduced_k_index][n],
                                                           [pbands[i][k_index][1] 
                                                            for i in range(len(pbands))])
@@ -803,8 +798,8 @@ def averagePhaseDeviation(multicell_grid, func_on_multicell_grid):
             n += 1
     return my_phase_diff_sum / (n * math.pi)
 
-def generateHierarchicGaussians(crystal, node_number_assignment, typecode):
-    for l in tools.generateAllIntegerTuples(2,1):
+def generateHierarchicGaussians(crystal, typecode):
+    for l in tools.generateAllPositiveIntegerTuples(2,1):
         div_x, div_y = tuple(l)
         dlb = crystal.Lattice.DirectLatticeBasis
         h_x = dlb[0] / div_x
@@ -822,9 +817,9 @@ def generateHierarchicGaussians(crystal, node_number_assignment, typecode):
         yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 
                                                      gaussian, 
                                                      typecode,
-                                                     node_number_assignment)
+                                                     crystal.NodeNumberAssignment)
 
-def generateRandomGaussians(crystal, node_number_assignment, typecode):
+def generateRandomGaussians(crystal, typecode):
     dlb = crystal.Lattice.DirectLatticeBasis
     while True:
         center_coords = [random.uniform(0.1, 0.9) for i in range(len(dlb))]
@@ -845,12 +840,12 @@ def generateRandomGaussians(crystal, node_number_assignment, typecode):
         yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 
                                                      gaussian, 
                                                      typecode,
-                                                     node_number_assignment)
+                                                     crystal.NodeNumberAssignment)
     
-def guessInitialMixMatrix(crystal, node_number_assignment, bands, sp):
+def guessInitialMixMatrix(crystal, bands, sp):
     # generate the gaussians
     gaussians = []
-    gaussian_it = generateRandomGaussians(crystal, node_number_assignment, num.Complex)
+    gaussian_it = generateRandomGaussians(crystal, num.Complex)
     for n in range(len(bands)):
         gaussians.append(gaussian_it.next())
 
@@ -864,7 +859,7 @@ def guessInitialMixMatrix(crystal, node_number_assignment, bands, sp):
         for k_index in crystal.KGrid:
             mf = fempy.mesh_function.discretizeFunction(
                 crystal.Mesh, lambda x: 0., num.Complex, 
-                number_assignment = node_number_assignment)
+                number_assignment = crystal.NodeNumberAssignment)
             coordinates = num.zeros((len(bands),), num.Complex)
             for m in range(len(bands)):
                 coordinates[m] = sp(gaussians[n], bands[m][k_index][1])
@@ -908,8 +903,6 @@ def run():
 
     crystal = crystals[-1]
 
-    node_number_assignment = crystal.Modes[0,0][0][1].numberAssignment()
-
     assert abs(integrateOverKGrid(
         crystal.KGrid, 
         lambda k_index, k: cmath.exp(1j*mtools.sp(k, num.array([5.,17.]))))) < 1e-10
@@ -917,8 +910,8 @@ def run():
         crystal.KGrid, 
         lambda k_index, k: cmath.exp(1j*mtools.sp(k, num.array([0.,0.]))))) < 1e-10
 
-    sp = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
-                                                      crystal.ScalarProduct)
+    sp = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
+                                                      crystal.MassMatrix)
                                                       
     gaps, clusters = pc.analyzeBandStructure(crystal.Bands)
 
@@ -927,7 +920,6 @@ def run():
 
     job = fempy.stopwatch.tJob("guessing initial mix")
     mix_matrix = guessInitialMixMatrix(crystal, 
-                                       node_number_assignment, 
                                        bands,
                                        sp)
     job.done()

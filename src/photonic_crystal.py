@@ -3,12 +3,24 @@ import cmath
 import fempy.tools as tools
 import fempy.stopwatch
 import fempy.mesh_function
+import fempy.mesh
+import fempy.geometry
 import fempy.visualization
 
 # Numeric imports -------------------------------------------------------------
 import pylinear.matrices as num
 import pylinear.linear_algebra as la
 import pylinear.matrix_tools as mtools
+
+
+
+
+class tConstantFunction:
+    def __init__(self, value):
+        self.Value = value
+
+    def __call__(self, x):
+        return self.Value
 
 
 
@@ -70,14 +82,15 @@ class tBravaisLattice:
 
 class tPhotonicCrystal:
     def __init__(self, lattice, mesh, k_grid, has_inversion_symmetry, 
-                 epsilon, modes_start = None):
+                 epsilon):
         self.Lattice = lattice
         self.Mesh = mesh
         self.KGrid = k_grid
         self.HasInversionSymmetry = has_inversion_symmetry
-        self.Modes = modes_start.copy()
         self.Epsilon = epsilon
-        self.ScalarProduct = None
+        self.NodeNumberAssignment = None
+        self.Modes = None
+        self.MassMatrix = None
         self.Bands = None
         self.PeriodicBands = None
 
@@ -390,7 +403,7 @@ def findBands(crystal, scalar_product_calculator):
 
             if first:
                 band[k_index] = modes[k_index][band_index]
-                first = False
+                #first = False
                 continue
             
             guessed_eigenvalues = []
@@ -518,17 +531,9 @@ def writeBandDiagram(filename, crystal, bands, k_vectors):
             for weight, neighbor in k_interp_info:
                 value += weight * band[neighbor][0]
 
-            next_band_value = 0.j
-            if i + 1 < len(bands):
-                for weight, neighbor in k_interp_info:
-                    next_band_value += weight * bands[i+1][neighbor][0]
-            dist = 0.5 / (2*math.pi) * \
-                   abs(cmath.sqrt(value) - cmath.sqrt(next_band_value))
-
-            band_diagram_file.write("%d\t%f\t%f\n" % 
+            band_diagram_file.write("%d\t%f\n" % 
                                         (index, 
-                                         scale_eigenvalue(value),
-                                         dist))
+                                         scale_eigenvalue(value)))
         band_diagram_file.write("\n")
 
 
@@ -568,11 +573,22 @@ def analyzeBandStructure(bands):
 
 
 def normalizeModes(crystal, scalar_product_calculator):
-    for key in crystal.KGrid:
-        for index, (evalue, emode) in enumerate(crystal.Modes[key]):
+    for k_index in crystal.KGrid:
+        for index, (evalue, emode) in enumerate(crystal.Modes[k_index]):
             norm_squared = scalar_product_calculator(emode, emode)
             assert abs(norm_squared.imag) < 1e-10
-            emode *= 1 / math.sqrt(norm_squared.real)
+            emode /= math.sqrt(norm_squared.real)
+
+
+
+
+def normalizeBands(crystal, scalar_product_calculator, bands):
+    for band in bands:
+        for k_index in crystal.KGrid:
+            emode = band[k_index][1]
+            norm_squared = scalar_product_calculator(emode, emode)
+            assert abs(norm_squared.imag) < 1e-10
+            emode /= math.sqrt(norm_squared.real)
 
 
 
@@ -631,3 +647,25 @@ def visualizeGridFunction(multicell_grid, func_on_multicell_grid):
                                                (",,result.vtk", ",,result_grid.vtk"), 
                                                offsets_and_mesh_functions)
 
+
+
+
+def generateSquareMeshWithRodCenter(lattice, inner_radius, coarsening_factor = 1, 
+                                    constraint_id = "floquet",
+                                    use_exact = True):
+    def needsRefinement( vert_origin, vert_destination, vert_apex, area ):
+        bary_x = ( vert_origin.x() + vert_destination.x() + vert_apex.x() ) / 3
+        bary_y = ( vert_origin.y() + vert_destination.y() + vert_apex.y() ) / 3
+        
+        dist_center = math.sqrt( bary_x**2 + bary_y**2 )
+        if dist_center < inner_radius * 1.2:
+            return area >= 2e-3 * coarsening_factor
+        else:
+            return area >= 1e-2 * coarsening_factor
+
+    geometry = [fempy.mesh.tShapeSection(
+        fempy.geometry.getParallelogram(lattice.DirectLatticeBasis), constraint_id),
+                fempy.mesh.tShapeSection(
+        fempy.geometry.getCircle(inner_radius, use_exact), None)]
+
+    return fempy.mesh.tTwoDimensionalMesh(geometry, refinement_func = needsRefinement)

@@ -30,9 +30,6 @@ job.done()
 
 crystal = crystals[0]
 
-node_number_assignment = crystal.Modes[0,0][0][1].numberAssignment()
-spc = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
-                                                   crystal.ScalarProduct)
 multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,
                                    limits = [(-2,2)] * 2)

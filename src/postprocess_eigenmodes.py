@@ -12,10 +12,8 @@ def run():
     job.done()
 
     for crystal in crystals:
-        node_number_assignment = crystal.Modes[0,0][0][1].numberAssignment()
-
-        spc = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
-                                                           crystal.ScalarProduct)
+        spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
+                                                           crystal.MassMatrix)
         job = fempy.stopwatch.tJob("normalizing modes")
         pc.normalizeModes(crystal, spc)
         job.done()
@@ -30,6 +28,11 @@ def run():
         crystal.PeriodicBands = pc.periodicizeBands(crystal, 
                                                     crystal.Bands)
         job.done()
+
+        job = fempy.stopwatch.tJob("normalizing periodic bands")
+        pc.normalizeBands(crystal, spc, crystal.PeriodicBands)
+        job.done()
+
 
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal_bands.pickle", "wb"), pickle.HIGHEST_PROTOCOL)

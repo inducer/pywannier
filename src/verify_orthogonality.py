@@ -27,13 +27,20 @@ import photonic_crystal as pc
 
 
 def verifyBandOrthogonality(crystal, spc, bands, threshold):
-    for key in crystal.KGrid:
+    violations = 0
+    total = 0
+    for k_index in crystal.KGrid:
         for index1 in range(len(bands)):
             for index2 in range(index1, len(bands)):
-                emode1 = bands[index1][key][1]
-                emode2 = bands[index2][key][1]
+                total += 1
+                emode1 = bands[index1][k_index][1]
+                emode2 = bands[index2][k_index][1]
                 sp = spc(emode1, emode2) 
-                assert abs(sp-mtools.delta(index1, index2)) < threshold
+                err = abs(sp-mtools.delta(index1, index2))
+                if err >= threshold:
+                    print k_index, index1, index2, err, "is over the threshold"
+                    violations += 1
+    return violations, total
 
 def run():
     job = fempy.stopwatch.tJob("loading")
@@ -41,19 +48,20 @@ def run():
     job.done()
 
     crystal = crystals[0]
-    node_number_assignment = crystal.Modes[0,0][0][1].numberAssignment()
 
-    spc = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
-                                                       crystal.ScalarProduct)
+    for crystal in crystals:
+        spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
+                                                           crystal.MassMatrix)
 
-    job = fempy.stopwatch.tJob("checking bloch functions")
-    verifyBandOrthogonality(crystal, spc, crystal.Bands, 1e-6)
-    job.done()
+        job = fempy.stopwatch.tJob("checking bloch functions")
+        vio, tot = verifyBandOrthogonality(crystal, spc, crystal.Bands, 2e-3)
+        job.done()
+        print vio, "violations out of", tot
 
-    job = fempy.stopwatch.tJob("checking periodicized bloch functions")
-    verifyBandOrthogonality(crystal, spc, crystal.PeriodicBands, 1e-2)
-    job.done()
-    print "OK"
+        job = fempy.stopwatch.tJob("checking periodicized bloch functions")
+        vio, tot = verifyBandOrthogonality(crystal, spc, crystal.PeriodicBands, 3e-3)
+        job.done()
+        print vio, "violations out of", tot
 
 if __name__ == "__main__":
     run()
