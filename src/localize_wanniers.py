@@ -216,12 +216,12 @@ class tKSpaceDirectionalWeights:
 
 # Marzari-relevant functionality ----------------------------------------------
 class tMarzariSpreadMinimizer:
-    def __init__(self, crystal, spc, debug_mode = True, interactive = False):
+    def __init__(self, crystal, spc, debug_mode = True, interactivity_level = 0):
         self.Crystal = crystal
         self.KWeights = tKSpaceDirectionalWeights(crystal)
         self.ScalarProductCalculator = spc
         self.DebugMode = debug_mode
-        self.InteractiveMode = interactive
+        self.InteractivityLevel = interactivity_level
 
     def computeOffsetScalarProducts(self, pbands):
         n_bands = len(pbands)
@@ -301,7 +301,7 @@ class tMarzariSpreadMinimizer:
                     m_plusb = num.hermite(scalar_products[added_tup, neg_kgii])
                     assert mtools.frobeniusNorm(m - m_plusb) < 1e-13
 
-        if not self.InteractiveMode:
+        if self.InteractivityLevel < 2:
             return
 
         # analyze arguments of diagonal entries
@@ -709,9 +709,10 @@ class tMarzariSpreadMinimizer:
                     sp_d = kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, new_grad_d, gradient)
                     sp = sp_od + sp_d
 
+                    oi_here = self.omegaI(len(pbands), temp_sps)
                     od = self.omegaD(len(pbands), temp_sps, arg)
                     ood = self.omegaOD(temp_sps)
-                    return od, ood, od+ood, sp.real, sp_od.real, sp_d.real
+                    return od, oi_here+ood, oi_here+od+ood, sp.real, sp_od.real, sp_d.real
                            
                 
                 step = 0.5/(4*sum(self.KWeights.KWeights))
@@ -719,7 +720,7 @@ class tMarzariSpreadMinimizer:
                 # Marzari's fixed step
                 #xmin = step
 
-                if self.InteractiveMode and (raw_input("see plot? y/n [n]:") == "y"):
+                if self.InteractivityLevel and (raw_input("see plot? y/n [n]:") == "y"):
                     tools.write1DGnuplotGraphs(plotfunc, -5*xmin, 5 * xmin, 
                                                steps = 100, progress = True)
                     raw_input("see plot:")
@@ -898,7 +899,7 @@ def guessInitialMixMatrix(crystal, node_number_assignment, bands, sp):
 
 def run():
     debug_mode = raw_input("enable debug mode? [n]") == "y"
-    interactive_mode = raw_input("enable interactive mode? [n]") == "y"
+    interactivity_level = int(raw_input("interactivity level? [0]"))
     random.seed(10)
 
     job = fempy.stopwatch.tJob("loading")
@@ -931,7 +932,7 @@ def run():
                                        sp)
     job.done()
 
-    minimizer = tMarzariSpreadMinimizer(crystal, sp, debug_mode, interactive_mode)
+    minimizer = tMarzariSpreadMinimizer(crystal, sp, debug_mode, interactivity_level)
     mix_matrix = minimizer.minimizeSpread(pbands, mix_matrix)
 
     mixed_bands = computeMixedBands(crystal, bands, mix_matrix)

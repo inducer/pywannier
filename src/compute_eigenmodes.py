@@ -135,7 +135,7 @@ def main():
                                                     epsilon,
                                                     a*inner_radius,
                                                     refine_steps = 0, # 4
-                                                    k_grid_points = 12)
+                                                    k_grid_points = 8)
 
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
