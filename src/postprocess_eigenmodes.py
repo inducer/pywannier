@@ -19,6 +19,14 @@ def run():
                                                     crystal.Modes)
         job.done()
 
+        job = fempy.stopwatch.tJob("unifying phases: bloch modes")
+        pc.unifyPhases(crystal.Modes)
+        job.done()
+
+        job = fempy.stopwatch.tJob("unifying phases: periodic modes")
+        pc.unifyPhases(crystal.PeriodicModes)
+        job.done()
+
         job = fempy.stopwatch.tJob("normalizing bloch modes")
         pc.normalizeModes(crystal.KGrid, crystal.Modes, spc)
         job.done()

@@ -674,3 +674,35 @@ def generateSquareMeshWithRodCenter(lattice, inner_radius, coarsening_factor = 1
         fempy.geometry.getCircle(inner_radius, use_exact), None)]
 
     return fempy.mesh.tTwoDimensionalMesh(geometry, refinement_func = needsRefinement)
+
+
+
+
+def unifyPhases(modes):
+    def findAbsMax(mesh_funcs):
+        max_val = 0
+        max_idx = None
+
+        for i in range(len(mesh_funcs[0].vector())):
+            this_val = 0
+            for mf in mesh_funcs:
+                this_val += abs(mf.vector()[i])
+            if this_val > max_val:
+                max_idx = i
+                max_val = this_val
+        return max_idx
+
+    mfs = [mode[1]
+           for key, modelist in modes.iteritems()
+           for mode in modelist
+           ]
+    max_i = findAbsMax(mfs)
+    for key, modelist in modes.iteritems():
+        for mode in modelist:
+            mf = mode[1]
+            mf /= (mf.vector()[max_i] / abs(mf.vector()[max_i]))
+            assert abs(mode[1].vector()[max_i].imag) < 1e-13
+
+
+
+

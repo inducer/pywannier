@@ -342,7 +342,7 @@ class tKSpaceDirectionalWeights:
                 my_sum = 0
                 for kgi_index, kgi in enumerate(self.KGridIncrements):
                     my_sum += self.KWeights[kgi_index]*kgi[i]*kgi[j]
-                assert my_sum == tools.delta(i, j)
+                assert abs(my_sum - tools.delta(i, j)) < 1e-15
 
 # Marzari-relevant functionality ----------------------------------------------
 class tMarzariSpreadMinimizer:

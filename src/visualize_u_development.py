@@ -24,28 +24,6 @@ import photonic_crystal as pc
 
 
 
-def findAbsMax(mesh_funcs):
-    max_val = 0
-    max_idx = None
-
-    for i in range(len(mesh_funcs[0].vector())):
-        this_val = 0
-        for mf in mesh_funcs:
-            this_val += abs(mf.vector()[i])
-        if this_val > max_val:
-            max_idx = i
-            max_val = this_val
-    return max_idx
-
-
-
-
-def normalizePhaseAt(mf, i):
-    return mf * (mf.vector()[i] / abs(mf.vector()[i]))
-    
-
-            
-
 job = fempy.stopwatch.tJob("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
@@ -66,9 +44,8 @@ for band_index, pband in enumerate(crystal.PeriodicBands):
                          for el, (low, high) in zip(mcell_index, multicell_grid.limits())])
         print "k =", crystal.KGrid[k_index]
         f_on_grid[mcell_index] = pband[k_index][1].real
-    abs_max_index = findAbsMax(f_on_grid.values())
     for mcell_index in multicell_grid:
-        f_on_grid[mcell_index] = normalizePhaseAt(f_on_grid[mcell_index], abs_max_index)
+        f_on_grid[mcell_index] = f_on_grid[mcell_index]
 
     pc.visualizeGridFunction(multicell_grid, f_on_grid)
     raw_input("[enter for next band]")
