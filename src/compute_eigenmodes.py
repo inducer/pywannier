@@ -51,16 +51,14 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
                                          refine_steps = 1,
                                          k_grid_points = 16):
     def needsRefinement( vert_origin, vert_destination, vert_apex, area ):
-        #return area >= 1e-2
-        return area >= 5e-2
         bary_x = ( vert_origin.x() + vert_destination.x() + vert_apex.x() ) / 3
         bary_y = ( vert_origin.y() + vert_destination.y() + vert_apex.y() ) / 3
     
         dist_center = math.sqrt( bary_x**2 + bary_y**2 )
-        if dist_center < 0.4:
-            return area >= 1e-2
+        if dist_center < inner_radius * 1.2:
+            return area >= 2e-3
         else:
-            return False
+            return area >= 1e-2
 
     job = fempy.stopwatch.tJob("geometry")
     mesh = fempy.mesh.tTwoDimensionalMesh(
