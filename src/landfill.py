@@ -92,35 +92,3 @@ for key in crystal.KGrid:
             print "  %d, %d: %f" % (index, index2, abs(sp))
 
 
-# ---------------------------------------------------------
-# boundary derivative convergence
-
-eoc_rec = fempy.eoc.tEOCRecorder()
-for crystal in crystals[0:3]:
-    periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
-                                                crystal.Lattice.DirectLatticeBasis)
-
-    boundary_error = 0.
-    for index in crystal.KGrid:
-        k = crystal.KGrid[index]
-        for evalue, mode in crystal.Modes[index]:
-            for gv, main_node, other_weights_and_nodes in periodicity_nodes:
-                mesh = mode.mesh()
-                my_sum = mode.getGradient(main_node.Coordinates)
-                print my_sum
-                for node, weight in other_weights_and_nodes:
-                    floquet_factor = cmath.exp(1j * mtools.sp(gv, k))
-                    my_sum += -weight * floquet_factor * \
-                              mode.getGradient(node.Coordinates)
-                    print weight * floquet_factor * \
-                          mode.getGradient(node.Coordinates)
-                    raw_input()
-                boundary_error += tools.norm2squared(my_sum)
-            print boundary_error
-
-        print k, boundary_error
-    eoc_rec.addDataPoint(len(crystal.Mesh.elements())**0.5,
-                         boundary_error ** 0.5)
-
-print "Boundary normal derivative EOC:", eoc_rec.estimateOrderOfConvergence()
-

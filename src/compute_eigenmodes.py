@@ -24,9 +24,8 @@ import photonic_crystal as pc
 def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, lattice.DirectLatticeBasis)
 
-    constrained_nodes = sets.Set([node for gv, node, rest in periodicity_nodes])
     eigensolver = fempy.solver.tLaplacianEigenproblemSolver(crystal.Mesh, 
-                                                            constrained_nodes = constrained_nodes,
+                                                            constrained_nodes = periodicity_nodes,
                                                             g = epsilon, 
                                                             typecode = num.Complex)
 
@@ -56,9 +55,9 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
     
         dist_center = math.sqrt( bary_x**2 + bary_y**2 )
         if dist_center < inner_radius * 1.2:
-            return area >= 2e-3
+            return area >= 2e-3 * 8
         else:
-            return area >= 1e-2
+            return area >= 1e-2 * 8
 
     job = fempy.stopwatch.tJob("geometry")
     mesh = fempy.mesh.tTwoDimensionalMesh(
@@ -123,8 +122,8 @@ def main():
     crystals = computeEigenmodesForStandardUnitCell(my_lattice, 
                                                     epsilon,
                                                     a*inner_radius,
-                                                    refine_steps = 0, # 4
-                                                    k_grid_points = 8)
+                                                    refine_steps = 3, # 4
+                                                    k_grid_points = 4)
     job = fempy.stopwatch.tJob("saving")
     cPickle.dump(crystals, file(",,crystal.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
     job.done()

@@ -127,7 +127,7 @@ def findPeriodicityNodes(mesh, grid_vectors):
     
     job = fempy.stopwatch.tJob("periodicity")
 
-    periodicity_nodes = []
+    periodicity_nodes = {}
     for node in bnodes:
         for gv in grid_vectors:
             ideal_point = node.Coordinates + gv
@@ -146,7 +146,7 @@ def findPeriodicityNodes(mesh, grid_vectors):
                 # Found one node that is close enough, bet our
                 # butt on it.
                 other_node, dist = close_nodes_with_dists[0]
-                periodicity_nodes.append((gv, node, [(other_node, 1)]))
+                periodicity_nodes[node] = (gv, [(other_node, 1)])
             else:
                 if len(close_nodes_with_dists) == 1:
                     print "WARNING: Found only one node that's near enough."
@@ -171,10 +171,10 @@ def findPeriodicityNodes(mesh, grid_vectors):
                         dist_b = dist
                         break
                 total_dist = dist_a + dist_b
-                periodicity_nodes.append(
-                    (gv, node,
-                     [(other_node_a, dist_a/total_dist),
-                      (other_node_b, dist_b/total_dist)]))
+                periodicity_nodes[node] = \
+                                        (gv, 
+                                         [(other_node_a, dist_a/total_dist),
+                                          (other_node_b, dist_b/total_dist)])
     job.done()
 
     return periodicity_nodes
@@ -184,7 +184,7 @@ def findPeriodicityNodes(mesh, grid_vectors):
 
 def getFloquetConstraints(periodicity_nodes, k):
     constraints = {}
-    for gv, dependent_node, independent_nodes in periodicity_nodes:
+    for dependent_node, (gv, independent_nodes) in periodicity_nodes.iteritems():
         floquet_factor = cmath.exp(-1j * num.innerproduct(gv, k))
         lincomb_specifier = []
         for independent_node, factor in independent_nodes:

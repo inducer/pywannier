@@ -69,7 +69,7 @@ for n, band in enumerate(bands):
     wannier_functions.append(this_wannier_function)
 job.done()
 
-if False:
+if True:
     for n, band in enumerate(bands):
         offsets_and_mesh_functions = []
         for multicell_index in multicell_grid:
@@ -83,6 +83,7 @@ if False:
         job.done()
         raw_input("[enter] for next: ")
 
+sys.exit(0)
 def addTuple(t1, t2):
     return tuple([t1v + t2v for t1v, t2v in zip(t1, t2)])
 
