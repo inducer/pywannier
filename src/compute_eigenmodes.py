@@ -80,8 +80,12 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
     crystals = []
     while len(crystals) <= refine_steps:
         print "have %d elements" % len(mesh.elements())
-        mode_dict = tools.tDependentDictionary(
-            pc.tInvertedModeListLookerUpper(k_grid.gridIntervalCounts()))
+        
+        if crystal.HasInversionSymmetry:
+            mode_dict = tools.tDependentDictionary(
+                pc.tInvertedModeListLookerUpper(k_grid.gridIntervalCounts()))
+        else:
+            mode_dict = {}
         
         crystal = pc.tPhotonicCrystal(lattice, 
                                       mesh, 
@@ -122,6 +126,7 @@ def main():
                                                     a*inner_radius,
                                                     refine_steps = 0, # 4
                                                     k_grid_points = 8)
+
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
     job.done()

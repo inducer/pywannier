@@ -3,10 +3,12 @@ import cmath
 import fempy.tools as tools
 import fempy.stopwatch
 import fempy.mesh_function
+import fempy.visualization
 
 # Numeric imports -------------------------------------------------------------
 import pylinear.matrices as num
 import pylinear.linear_algebra as la
+import pylinear.matrix_tools as mtools
 
 
 
@@ -68,7 +70,7 @@ class tBravaisLattice:
 
 class tPhotonicCrystal:
     def __init__(self, lattice, mesh, k_grid, has_inversion_symmetry, 
-                 epsilon, modes_start = {}):
+                 epsilon, modes_start = None):
         self.Lattice = lattice
         self.Mesh = mesh
         self.KGrid = k_grid
@@ -76,6 +78,8 @@ class tPhotonicCrystal:
         self.Modes = modes_start.copy()
         self.Epsilon = epsilon
         self.ScalarProduct = None
+        self.Bands = None
+        self.PeriodicBands = None
 
 
 
@@ -217,11 +221,7 @@ class tBand:
     def __init__(self, crystal, structure):
         self.Structure = structure
 
-        evalues = []
-        for i in crystal.KGrid:
-            evalues.append(self[i][0])
-
-        ev_abs = [abs(x) for x in evalues]
+        ev_abs = [abs(self[k_index][0]) for k_index in crystal.KGrid]
         self.MaxAbsolute = max(ev_abs)
         self.MinAbsolute = min(ev_abs)
 
@@ -255,7 +255,7 @@ def findBands(crystal):
             list_index = tools.argmin(distances, lambda (i, ev): ev)
             return mk_values_with_indices[list_index][0]
 
-        def findNeighbors(i, j, di, dj, max_count = 2):
+        def findNeighbors((i, j), (di, dj), max_count = 2):
             result = []
             for step_count in range(max_count):
                 i += di
@@ -274,49 +274,39 @@ def findBands(crystal):
         else:
             band = {}
 
-        band = makeKPeriodicLookupStructure(k_grid, band)
-
         first = True
 
-        for i,j in k_grid:
-            k = k_grid[i,j]
+        for k_index in k_grid:
+            k = k_grid[k_index]
             if crystal.HasInversionSymmetry and k[0] < 0:
                 continue
 
             if first:
-                band[i,j] = modes[i,j][band_index]
+                band[k_index] = modes[k_index][band_index]
                 continue
             
             neighbor_sets = []
             guessed_eigenvalues = []
             for direction in all_dirs:
-                di = direction[0]
-                dj = direction[1]
-                neighbor_set = findNeighbors(i, j, di, dj)
+                neighbor_set = findNeighbors(k_index, tuple(direction))
             if len(neighbor_set):
                 if len(neighbor_set) == 1:
-                    ni, nj = neighbor_set[0]
-                    guessed_eigenvalues.append(band[ni,nj][0])
+                    guessed_eigenvalues.append(band[neighbor_set[0]][0])
                 elif len(neighbor_set) == 2:
-                    ni0, nj0 = neighbor_set[0]
-                    ni1, nj1 = neighbor_set[1]
-                    closer_eigenvalue = band[ni0,nj0][0]
-                    further_eigenvalue = band[ni1,nj1][0]
+                    closer_eigenvalue = band[neighbor_set[0]][0]
+                    further_eigenvalue = band[neighbor_set[1]][0]
                     guessed_eigenvalues.append(2*closer_eigenvalue - further_eigenvalue)
                 elif len(neighbor_set) == 3:
                     # quadratic approximation
-                    ni0, nj0 = neighbor_set[0]
-                    ni1, nj1 = neighbor_set[1]
-                    ni2, nj2 = neighbor_set[2]
-                    closer_eigenvalue = band[ni0,nj0][0]
-                    further_eigenvalue = band[ni1,nj1][0]
-                    furthest_eigenvalue = band[ni2,nj2][0]
+                    closer_eigenvalue = band[neighbor_set[0]][0]
+                    further_eigenvalue = band[neighbor_set[1]][0]
+                    furthest_eigenvalue = band[neighbor_set[2]][0]
                     guessed_eigenvalues.append(3*closer_eigenvalue - 3*further_eigenvalue + furthest_eigenvalue)
                 else:
                     raise RuntimeError, "unexpected neighbor set length"
-                index = findClosestAt((i,j), guessed_eigenvalues)
-                band[i,j] = modes[i,j][index]
-                taken_eigenvalues[i,j].append(index)
+                index = findClosestAt(k_index, guessed_eigenvalues)
+                band[k_index] = modes[k_index][index]
+                taken_eigenvalues[k_index].append(index)
         return band
 
     return [tBand(crystal, findBand(i)) for i in range(len(modes[0,0]))]
@@ -464,3 +454,49 @@ def normalizeModes(crystal, scalar_product_calculator):
             norm_squared = scalar_product_calculator(emode, emode)
             assert abs(norm_squared.imag) < 1e-10
             emode *= 1 / math.sqrt(norm_squared.real)
+
+
+
+
+def periodicizeMeshFunction(mf, k, exponent = -1):
+    vec = mf.vector()
+    pvec = num.zeros(vec.shape, num.Complex)
+    na = mf.numberAssignment()
+    for node in mf.mesh().dofManager():
+        pvec[na[node]] = vec[na[node]] * cmath.exp(1j * exponent *
+                                                   mtools.sp(node.Coordinates, k))
+    return mf.copy(vector = pvec)
+
+
+
+
+def periodicizeBands(crystal, bands, exponent = -1):
+    pbands = []
+    for band in bands:
+        pband = {}
+        for ki in crystal.KGrid:
+            if crystal.HasInversionSymmetry and crystal.KGrid[ki][0] < 0:
+                continue
+            pband[ki] = band[ki][0], \
+                        periodicizeMeshFunction(band[ki][1],
+                                                crystal.KGrid[ki],
+                                                exponent)
+        if crystal.HasInversionSymmetry:
+            pband = tools.tDependentDictionary(
+                tInvertedModeLookerUpper(crystal.KGrid.gridIntervalCounts()),
+                pband)
+        pbands.append(pband)
+    return pbands
+
+
+
+
+def visualizeGridFunction(multicell_grid, func_on_multicell_grid):
+    offsets_and_mesh_functions = []
+    for multicell_index in multicell_grid:
+        R = multicell_grid[multicell_index]
+        offsets_and_mesh_functions.append((R, func_on_multicell_grid[multicell_index]))
+    fempy.visualization.visualizeSeveralMeshes("vtk", 
+                                               (",,result.vtk", ",,result_grid.vtk"), 
+                                               offsets_and_mesh_functions)
+

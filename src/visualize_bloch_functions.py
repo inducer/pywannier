@@ -23,9 +23,6 @@ import photonic_crystal as pc
 
 
 
-def findNearestNode(mesh, point):
-    return tools.argmin(mesh.dofManager(),
-                              lambda node: tools.norm2(node.Coordinates-point))
 
 job = fempy.stopwatch.tJob("loading")
 crystals = pickle.load(file(",,crystal.pickle", "rb"))
@@ -33,19 +30,12 @@ job.done()
 
 crystal = crystals[0]
 
-sp = fempy.mesh_function.tScalarProductCalculator(crystal.ScalarProduct)
-job = fempy.stopwatch.tJob("normalizing modes")
-for key in crystal.KGrid:
-    norms = []
-    for index, (evalue, emode) in enumerate(crystal.Modes[key]):
-        norm_squared = sp(emode, emode)
-        assert abs(norm_squared.imag) < 1e-10
-        emode *= 1 / math.sqrt(norm_squared.real)
-job.done()
+node_number_assignment = crystal.Modes[0,0][0][1].numberAssignment()
+spc = fempy.mesh_function.tScalarProductCalculator(node_number_assignment,
+                                                   crystal.ScalarProduct)
+pc.normalizeModes(crystal, spc)
 
-job = fempy.stopwatch.tJob("localizing bands")
 bands = pc.findBands(crystal)
-job.done()
 
 multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,
@@ -55,17 +45,29 @@ dlb = crystal.Lattice.DirectLatticeBasis
 for band_index, band in enumerate(bands):
     for k_index in crystal.KGrid:
         k = crystal.KGrid[k_index]
-        print "band = ", band_index, "k =",k
-        
-        offsets_and_mesh_functions = []
-        for multicell_index in multicell_grid:
-            R = multicell_grid[multicell_index]
+        break_k = False
+        while True:
+            print "band = ", band_index, "k =",k
+            value = raw_input("[p for psi, u for u, b for next band, empty for next]:")
+            if value == "":
+                break
+            if value == "b":
+                break_k = True
+                break
 
-            my_mode = cmath.exp(1.j * mtools.sp(k,R)) * band[k_index][1]
-            offsets_and_mesh_functions.append((R, my_mode.real))
-        visualization.visualizeSeveralMeshes("vtk", 
-                                             (",,result.vtk", ",,result_grid.vtk"), 
-                                             offsets_and_mesh_functions)
-        value = raw_input("[b<enter> for next band, enter for next k in band]:")
-        if value == "b":
+            if value in ["p", "u"]:
+                f_on_grid = {}
+                offsets_and_mesh_functions = []
+                for multicell_index in multicell_grid:
+                    R = multicell_grid[multicell_index]
+
+                    if value == "p":
+                        my_mode = cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
+                    else:
+                        my_mode = pc.periodicizeMeshFunction(band[k_index][1], k)
+                    f_on_grid[multicell_index] = my_mode.real
+                pc.visualizeGridFunction(multicell_grid, f_on_grid)
+
+        if break_k:
             break
+
