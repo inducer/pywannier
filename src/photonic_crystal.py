@@ -1,5 +1,4 @@
-import math
-import cmath
+import math, cmath, sets
 import fempy.tools as tools
 import fempy.stopwatch
 import fempy.mesh_function
@@ -89,8 +88,11 @@ class tPhotonicCrystal:
         self.HasInversionSymmetry = has_inversion_symmetry
         self.Epsilon = epsilon
         self.NodeNumberAssignment = None
-        self.Modes = None
         self.MassMatrix = None
+
+        self.Modes = None
+        self.PeriodicModes = None
+
         self.Bands = None
         self.PeriodicBands = None
 
@@ -286,15 +288,20 @@ def getFloquetConstraints(periodicity_nodes, k):
 
 
 class tBand:
-    def __init__(self, crystal, structure):
-        self.Structure = structure
+    def __init__(self, crystal, modes, indices):
+        self.Crystal = crystal
+        self.Modes = modes
+        self.Indices = indices
 
         ev_abs = [abs(self[k_index][0]) for k_index in crystal.KGrid]
         self.MaxAbsolute = max(ev_abs)
         self.MinAbsolute = min(ev_abs)
 
-    def __getitem__(self, index):
-        return self.Structure[index]
+    def copy(self, new_modes = None):
+        return tBand(self.Crystal, new_modes or self.Modes, self.Indices)
+
+    def __getitem__(self, k_index):
+        return self.Modes[k_index][self.Indices[k_index]]
 
 
 
@@ -325,17 +332,17 @@ def findDegeneracies(crystal, threshold = 1e-3):
         
    
 
-def findBands(crystal, scalar_product_calculator):
+def findBands(crystal, modes, scalar_product_calculator):
     """Requires the eigenmodes to have norm 1.
 
     Returns a list of tBand objects.
     """
-    k_grid = crystal.KGrid
-    modes = crystal.Modes
+
     all_dirs = tools.enumerateBasicDirections(2)
     spc = scalar_product_calculator
+    k_grid = crystal.KGrid
     
-    taken_eigenvalues = tools.tDictionaryWithDefault(lambda key: [])
+    taken_eigenvalues = {}
 
     def findNeighbors(k_index, k_index_increment, max_count, band):
         result = []
@@ -350,36 +357,34 @@ def findBands(crystal, scalar_product_calculator):
         return result
 
     def findClosestAt(k_index, eigenvalues, eigenmodes):
-        indices = range(len(modes[k_index]))
-
-        # erase taken indices from possible choices
-        taken = taken_eigenvalues[k_index]
-        taken.sort()
-        for i in taken[-1::-1]:
-            indices.pop(i)
+        indices = [i 
+                   for i in range(len(modes[k_index]))
+                   if i not in taken_eigenvalues[k_index]]
 
         distances = {}
         sps = {}
         joint_scores = {}
         for index in indices:
             evalue, emode = modes[k_index][index]
-            distances[index] = sum([abs(evalue-ref_evalue)**2 for ref_evalue in eigenvalues])
+            distances[index] = sum([abs(evalue-ref_evalue) for ref_evalue in eigenvalues])
             sps[index] = tools.average([abs(spc(emode, ref_emode)) for ref_emode in eigenmodes])
 
             # FIXME inherently bogus
             # or, rather, needs parameter adjustment...
             joint_scores[index] = len(eigenmodes)/(1e-20+sps[index]) + distances[index]
 
-        best_index_evdist = indices[tools.argmin(indices, lambda i: distances[i])]
-        best_dist = distances[best_index_evdist]
+        best_index = indices[tools.argmin(indices, lambda i: distances[i])]
+        return best_index
+
+        best_value = distances[best_index]
 
         tied_values = [index
                        for index in indices
-                       if distances[index] < 2 * best_dist]
+                       if distances[index] < 2 * best_value]
 
         if len(tied_values) == 1:
             # no other tied values, push out result
-            return best_index_evdist
+            return best_index
         else:
             # use "joint score" as a tie breaker
             best_index_joint = tied_values[tools.argmin(tied_values, 
@@ -388,48 +393,53 @@ def findBands(crystal, scalar_product_calculator):
             return best_index_joint
 
     def findBand(band_index):
-        if crystal.HasInversionSymmetry:
-            band = tools.tDependentDictionary(
-                tReducedBrillouinLookerUpper(k_grid))
-        else:
-            band = makeKPeriodicLookupStructure(k_grid)
+        band_indices = makeKPeriodicLookupStructure(k_grid)
 
-        first = True
+        print "WARNING: No-op findBands"
+        # reset taken_eigenvalues
+        for k_index in k_grid:
+            taken_eigenvalues[k_index] = sets.Set()
+            band_indices[k_index] = band_index
+            
+        return tBand(crystal, modes, band_indices)
 
         for k_index in k_grid:
             k = k_grid[k_index]
-            if crystal.HasInversionSymmetry and k[0] > 0:
-                continue
 
-            if first:
-                band[k_index] = modes[k_index][band_index]
-                #first = False
-                continue
-            
             guessed_eigenvalues = []
             close_eigenmodes = []
             for direction in all_dirs:
-                neighbor_set = findNeighbors(k_index, tuple(direction), 3, band)
+                neighbor_set = findNeighbors(k_index, tuple(direction), 2, band_indices)
                 if len(neighbor_set) == 0:
                     pass
                 elif len(neighbor_set) == 1:
-                    close_eigenmodes.append(band[neighbor_set[0]][1])
-                    guessed_eigenvalues.append(band[neighbor_set[0]][0])
+                    n0 = neighbor_set[0]
+                    close_eigenmodes.append(modes[n0][band_indices[n0]][1])
+
+                    guessed_eigenvalues.append(modes[n0][band_indices[n0]][0])
                 elif len(neighbor_set) == 2:
-                    close_eigenmodes.append(band[neighbor_set[0]][1])
+                    n0 = neighbor_set[0]
+                    n1 = neighbor_set[1]
+                    close_eigenmodes.append(modes[n0][band_indices[n0]][1])
 
                     # linear approximation
-                    closer_eigenvalue = band[neighbor_set[0]][0]
-                    further_eigenvalue = band[neighbor_set[1]][0]
-                    guessed_eigenvalues.append(2*closer_eigenvalue - further_eigenvalue)
+                    n0_eigenvalue = modes[n0][band_indices[n0]][0]
+                    n1_eigenvalue = modes[n0][band_indices[n1]][0]
+                    guessed_eigenvalues.append(2*n0_eigenvalue 
+                                               - n1_eigenvalue)
                 elif len(neighbor_set) == 3:
-                    close_eigenmodes.append(band[neighbor_set[0]][1])
+                    n0 = neighbor_set[0]
+                    n1 = neighbor_set[1]
+                    n2 = neighbor_set[2]
+                    close_eigenmodes.append(modes[n0][band_indices[n0]][1])
 
                     # quadratic approximation
-                    closer_eigenvalue = band[neighbor_set[0]][0]
-                    further_eigenvalue = band[neighbor_set[1]][0]
-                    furthest_eigenvalue = band[neighbor_set[2]][0]
-                    guessed_eigenvalues.append(3*closer_eigenvalue - 3*further_eigenvalue + furthest_eigenvalue)
+                    n0_eigenvalue = modes[n0][band_indices[n0]][0]
+                    n1_eigenvalue = modes[n0][band_indices[n1]][0]
+                    n2_eigenvalue = modes[n0][band_indices[n2]][0]
+                    guessed_eigenvalues.append(3*n0_eigenvalue 
+                                               - 3*n1_eigenvalue 
+                                               + n2_eigenvalue)
                 else:
                     raise RuntimeError, "unexpected neighbor set length %d at %s" % (
                         len(neighbor_set), k_index)
@@ -438,11 +448,11 @@ def findBands(crystal, scalar_product_calculator):
             assert len(close_eigenmodes) > 0
 
             index = findClosestAt(k_index, guessed_eigenvalues, close_eigenmodes)
-            band[k_index] = modes[k_index][index]
-            taken_eigenvalues[k_index].append(index)
-        return band
+            band_indices[k_index] = index
+            taken_eigenvalues[k_index].add(index)
+        return tBand(crystal, modes, band_indices)
 
-    return [tBand(crystal, findBand(i)) for i in range(len(modes[0,0]))]
+    return [findBand(i) for i in range(len(modes[0,0]))]
 
 
     
@@ -491,7 +501,7 @@ def visualizeBandsVTK(filename, crystal, bands):
         for k_index in k_grid:
             makeNode(k_index)
 
-        for i,j in k_grid:
+        for i,j in k_grid.chopUpperBoundary():
             quads.append((
                 node_lookup[i,j],
                 node_lookup[i+1,j],
@@ -572,20 +582,9 @@ def analyzeBandStructure(bands):
 
 
 
-def normalizeModes(crystal, scalar_product_calculator):
-    for k_index in crystal.KGrid:
-        for index, (evalue, emode) in enumerate(crystal.Modes[k_index]):
-            norm_squared = scalar_product_calculator(emode, emode)
-            assert abs(norm_squared.imag) < 1e-10
-            emode /= math.sqrt(norm_squared.real)
-
-
-
-
-def normalizeBands(crystal, scalar_product_calculator, bands):
-    for band in bands:
-        for k_index in crystal.KGrid:
-            emode = band[k_index][1]
+def normalizeModes(k_grid, modes, scalar_product_calculator):
+    for k_index in k_grid:
+        for index, (evalue, emode) in enumerate(modes[k_index]):
             norm_squared = scalar_product_calculator(emode, emode)
             assert abs(norm_squared.imag) < 1e-10
             emode /= math.sqrt(norm_squared.real)
@@ -608,32 +607,32 @@ def periodicizeMeshFunction(mf, k, exponent = -1):
 
 
 
-def periodicizeBands(crystal, bands, exponent = -1):
-    pbands = []
-    for band in bands:
-        if crystal.HasInversionSymmetry:
-            pband = tools.tDependentDictionary(
-                tInvertedModeLookerUpper(crystal.KGrid))
-        else:
-            pband = {}
+def periodicizeModes(crystal, modes, exponent = -1, verify = False):
+    if crystal.HasInversionSymmetry:
+        pmodes = tools.tDependentDictionary(
+            tInvertedModeListLookerUpper(crystal.KGrid))
+    else:
+        pmodes = {}
 
-        for k_index in crystal.KGrid.enlargeAtBothBoundaries():
-            if crystal.HasInversionSymmetry and crystal.KGrid[k_index][0] > 0:
-                continue
-            pband[k_index] = band[k_index][0], \
-                        periodicizeMeshFunction(band[k_index][1],
-                                                crystal.KGrid[k_index],
-                                                exponent)
-
-        for k_index in crystal.KGrid.enlargeAtBothBoundaries():
-            this_pband = periodicizeMeshFunction(band[k_index][1],
-                                                 crystal.KGrid[k_index],
-                                                 exponent)
-
-            assert tools.norm2((this_pband - pband[k_index][1]).vector()) < 1e-10
-        pbands.append(pband)
         
-    return pbands
+    for k_index in crystal.KGrid.enlargeAtBothBoundaries():
+        k = crystal.KGrid[k_index]
+        if crystal.HasInversionSymmetry and k[0] > 0:
+            continue
+
+        pmodes[k_index] = []
+        for evalue, emode in modes[k_index]:
+            pmodes[k_index].append((evalue,
+                                    periodicizeMeshFunction(emode, k, exponent)))
+
+    if verify:
+        for k_index in crystal.KGrid.enlargeAtBothBoundaries():
+            k = crystal.KGrid[k_index]
+            for (evalue, emode), (pevalue, pemode) in zip(modes[k_index], pmodes[k_index]):
+                this_pmode = periodicizeMeshFunction(emode, k, exponent)
+                assert tools.norm2((this_pmode - pemode).vector()) < 1e-10
+
+    return pmodes
 
 
 

@@ -34,6 +34,10 @@ crystal.MassMatrix = fempy.solver.buildMassMatrix(mesh, complete_number_assignme
                                                   crystal.Epsilon, num.Complex)
 crystal.NodeNumberAssignment = complete_number_assignment
 
+n_bands = 10
+
+crystal.Modes = tools.tDependentDictionary(pc.tReducedBrillouinModeListLookerUpper(k_grid))
+
 for k_index in k_grid:
     k = k_grid[k_index]
     if k[0] > 0:
@@ -46,16 +50,18 @@ for k_index in k_grid:
                   (2*math.pi*j+k_grid[k_index][1])**2 + 0.j
         eigenvalues_here.append((lambda_, (i,j)))
 
-    eigenvalues_here.sort(lambda (ev1, t1), (ev2, t2): cmp(abs(ev1), abs(ev2)))
+    #eigenvalues_here.sort(lambda (ev1, t1), (ev2, t2): cmp(abs(ev1), abs(ev2)))
 
     modes_here = []
-    for ev, (i,j) in eigenvalues_here[:10]:
-        modes_here.append((ev, fempy.mesh_function.discretizeFunctionByNodes(
+    for band_index, (ev, (i,j)) in enumerate(eigenvalues_here[:n_bands]):
+        mode = fempy.mesh_function.discretizeFunction(
             mesh, 
             lambda x: cmath.exp(1j*((k[0]+2*math.pi*i)*x[0]+
                                     (k[1]+2*math.pi*j)*x[1])),
             num.Complex,
-            crystal.NodeNumberAssignment)))
+            crystal.NodeNumberAssignment)
+
+        modes_here.append((ev, mode))
     crystal.Modes[k_index] = modes_here
 
 job = fempy.stopwatch.tJob("saving")

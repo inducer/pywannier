@@ -29,7 +29,7 @@ def computeEigenmodes(crystal, sigma):
                                                             typecode = num.Complex)
 
     crystal.MassMatrix = eigensolver.massMatrix()
-    crystal.CompleteNodeNumberAssignment = eigensolver.nodeNumberAssignment()
+    crystal.NodeNumberAssignment = eigensolver.nodeNumberAssignment()
 
     for k_index in crystal.KGrid:
         k = crystal.KGrid[k_index]
@@ -43,6 +43,8 @@ def computeEigenmodes(crystal, sigma):
         crystal.Modes[k_index] = eigensolver.solve(sigma,
                                                    tolerance = 1e-10,
                                                    number_of_eigenvalues = 10)
+        for ev, em in crystal.Modes[k_index]:
+            assert em.numberAssignment() is crystal.NodeNumberAssignment
 
 def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
                                          refine_steps = 1,
@@ -111,8 +113,8 @@ def run():
 
     my_lattice = pc.tBravaisLattice([num.array([a,0], num.Float), num.array([0,a], num.Float)])
 
-    epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(1, a*inner_radius, 1.))
-    #epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(11.56, a*inner_radius, 1.))
+    #epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(1, a*inner_radius, 1.))
+    epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(11.56, a*inner_radius, 1.))
     
     crystals = computeEigenmodesForStandardUnitCell(my_lattice, 
                                                     epsilon,

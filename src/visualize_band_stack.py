@@ -10,13 +10,9 @@ import photonic_crystal as pc
 
 
 job = fempy.stopwatch.tJob("loading")
-crystals = pickle.load(file(",,crystal.pickle", "rb"))
+crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
-crystal = crystals[0]
+crystal = crystals[-1]
 
-job = fempy.stopwatch.tJob("localizing bands")
-bands = pc.findBands(crystal)
-job.done()
-
-pc.visualizeBandsVTK(",,bands.vtk", crystal, bands[0:8])
+pc.visualizeBandsVTK(",,bands.vtk", crystal, crystal.Bands[2:3])

@@ -14,25 +14,31 @@ def run():
     for crystal in crystals:
         spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
                                                            crystal.MassMatrix)
-        job = fempy.stopwatch.tJob("normalizing modes")
-        pc.normalizeModes(crystal, spc)
+        job = fempy.stopwatch.tJob("calculating periodic modes")
+        crystal.PeriodicModes = pc.periodicizeModes(crystal, 
+                                                    crystal.Modes)
+        job.done()
+
+        job = fempy.stopwatch.tJob("normalizing bloch modes")
+        pc.normalizeModes(crystal.KGrid, crystal.Modes, spc)
+        job.done()
+
+        job = fempy.stopwatch.tJob("normalizing periodic modes")
+        pc.normalizeModes(crystal.KGrid, crystal.PeriodicModes, spc)
         job.done()
 
         print "degeneracies:", pc.findDegeneracies(crystal)
 
         job = fempy.stopwatch.tJob("finding bands")
-        crystal.Bands = pc.findBands(crystal, spc)
+        crystal.Bands = pc.findBands(crystal, 
+                                     crystal.Modes, 
+                                     spc)
         job.done()
 
-        job = fempy.stopwatch.tJob("periodicizing bands")
-        crystal.PeriodicBands = pc.periodicizeBands(crystal, 
-                                                    crystal.Bands)
-        job.done()
-
-        job = fempy.stopwatch.tJob("normalizing periodic bands")
-        pc.normalizeBands(crystal, spc, crystal.PeriodicBands)
-        job.done()
-
+        crystal.PeriodicBands = [tools.tDependentDictionary(
+            pc.tKPeriodicLookerUpper(crystal.KGrid),
+                                     band.copy(new_modes = crystal.PeriodicModes))
+            for band in crystal.Bands]
 
     job = fempy.stopwatch.tJob("saving")
     pickle.dump(crystals, file(",,crystal_bands.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
