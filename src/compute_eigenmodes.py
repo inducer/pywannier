@@ -10,6 +10,7 @@ import pylinear.matrix_tools as mtools
 import fempy.mesh
 import fempy.geometry
 import fempy.stopwatch
+import fempy.visualization
 import fempy.solver
 import fempy.tools as tools
 
@@ -56,6 +57,8 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
                                                inner_radius = inner_radius,
                                                coarsening_factor = coarsening_factor)
     job.done()
+
+    fempy.visualization.writeGnuplotMesh(mesh, ",,mesh.data")
 
     sigma = 0.
   
