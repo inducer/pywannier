@@ -15,4 +15,4 @@ job.done()
 
 crystal = crystals[-1]
 
-pc.visualizeBandsVTK(",,bands.vtk", crystal, crystal.Bands[2:3])
+pc.visualizeBandsVTK(",,bands.vtk", crystal, crystal.Bands)

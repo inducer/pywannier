@@ -343,6 +343,8 @@ def findBands(crystal, modes, scalar_product_calculator):
     k_grid = crystal.KGrid
     
     taken_eigenvalues = {}
+    for k_index in k_grid:
+        taken_eigenvalues[k_index] = sets.Set()
 
     def findNeighbors(k_index, k_index_increment, max_count, band):
         result = []
@@ -397,10 +399,9 @@ def findBands(crystal, modes, scalar_product_calculator):
 
         # reset taken_eigenvalues
         for k_index in k_grid:
-            taken_eigenvalues[k_index] = sets.Set()
             band_indices[k_index] = band_index
             
-        if True:
+        if False:
             print "WARNING: No-op findBands"
             return tBand(crystal, modes, band_indices)
 
@@ -456,6 +457,7 @@ def findBands(crystal, modes, scalar_product_calculator):
     return [findBand(i) for i in range(len(modes[0,0]))]
 
 
+
     
 
 def visualizeBandsGnuplot(filename, crystal, bands):
@@ -491,27 +493,30 @@ def visualizeBandsVTK(filename, crystal, bands):
     def scale_eigenvalue(ev):
         return math.sqrt(abs(ev)) / (2 * math.pi)
 
-    def makeNode(key):
-        node_number = len(nodes)
-        spot = k_grid[key]
-        nodes.append((spot[0], spot[1], 5*scale_eigenvalue(band[key][0])))
-        node_lookup[key] = node_number
+    node_lookup = {}
+    for i,j in k_grid:
+        spot = k_grid[i,j]
+        node_lookup[i,j] = len(nodes)
+        nodes.append((spot[0], spot[1], 0))
 
-    for band in bands:
-        node_lookup = {}
+    for i,j in k_grid.chopUpperBoundary():
+        quads.append((
+            node_lookup[i,j],
+            node_lookup[i+1,j],
+            node_lookup[i+1,j+1],
+            node_lookup[i,j+1],
+            node_lookup[i,j]))
+
+
+    datasets = []
+    for i, band in enumerate(bands):
+        values = []
         for k_index in k_grid:
-            makeNode(k_index)
-
-        for i,j in k_grid.chopUpperBoundary():
-            quads.append((
-                node_lookup[i,j],
-                node_lookup[i+1,j],
-                node_lookup[i+1,j+1],
-                node_lookup[i,j+1],
-                node_lookup[i,j]))
+            values.append(scale_eigenvalue(band[k_index][0]))
+        datasets.append(pyvtk.Scalars(values, "band%d" % i, "default"))
             
     structure = pyvtk.PolyData(points = nodes, polygons = quads)
-    vtk = pyvtk.VtkData(structure, "Bands")
+    vtk = pyvtk.VtkData(structure, "Bands", pyvtk.PointData(*datasets))
     vtk.tofile(filename, "ascii")
 
 

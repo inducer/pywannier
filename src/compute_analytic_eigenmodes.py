@@ -11,7 +11,7 @@ lattice = pc.tBravaisLattice([num.array([1,0]), num.array([0, 1])])
 
 rl = lattice.ReciprocalLattice
 k_grid  = tools.makeCellCenteredGrid(-0.5*(rl[0]+rl[1]), rl,
-                                     [(0, 8)] * 2)
+                                     [(0, 20)] * 2)
 
 job = fempy.stopwatch.tJob("geometry")
 mesh = pc.generateSquareMeshWithRodCenter(lattice, 0.18)
@@ -50,7 +50,7 @@ for k_index in k_grid:
                   (2*math.pi*j+k_grid[k_index][1])**2 + 0.j
         eigenvalues_here.append((lambda_, (i,j)))
 
-    #eigenvalues_here.sort(lambda (ev1, t1), (ev2, t2): cmp(abs(ev1), abs(ev2)))
+    eigenvalues_here.sort(lambda (ev1, t1), (ev2, t2): cmp(abs(ev1), abs(ev2)))
 
     modes_here = []
     for band_index, (ev, (i,j)) in enumerate(eigenvalues_here[:n_bands]):
