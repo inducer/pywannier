@@ -213,6 +213,24 @@ def getFloquetConstraints(periodicity_nodes, k):
 
 
 
+class tBand:
+    def __init__(self, crystal, structure):
+        self.Structure = structure
+
+        evalues = []
+        for i in crystal.KGrid:
+            evalues.append(self[i][0])
+
+        ev_abs = [abs(x) for x in evalues]
+        self.MaxAbsolute = max(ev_abs)
+        self.MinAbsolute = min(ev_abs)
+
+    def __getitem__(self, index):
+        return self.Structure[index]
+
+
+
+
 def findBands(crystal):
     k_grid = crystal.KGrid
     k_grid_point_counts = k_grid.gridPointCounts()
@@ -301,7 +319,7 @@ def findBands(crystal):
                 taken_eigenvalues[i,j].append(index)
         return band
 
-    return [findBand(i) for i in range(len(modes[0,0]))]
+    return [tBand(crystal, findBand(i)) for i in range(len(modes[0,0]))]
 
 
     
@@ -406,3 +424,43 @@ def writeBandDiagram(filename, crystal, bands, k_vectors):
 
 
 
+def analyzeBandStructure(bands):
+    endpoints = []
+    for idx, band in enumerate(bands):
+        endpoints.append((band.MinAbsolute, "MIN", idx))
+        endpoints.append((band.MaxAbsolute, "MAX", idx))
+    endpoints.sort(lambda x,y: cmp(x[0], y[0]))
+
+    # sweepline algorithm
+    active_bands = []
+    active_cluster = []
+    clusters = []
+    gaps = []
+    last_evalue = 0.
+    for (evalue, minmax, band_idx) in endpoints:
+        if minmax == "MIN":
+            if not active_bands:
+                gaps.append((last_evalue, evalue))
+            assert band not in active_bands
+            active_bands.append(band_idx)
+            if band_idx not in active_cluster:
+                active_cluster.append(band_idx)
+        else:
+            active_bands.remove(band_idx)
+            if not active_bands:
+                clusters.append(active_cluster)
+                active_cluster = []
+        last_evalue = evalue
+
+    return gaps, clusters
+
+
+
+
+def normalizeModes(crystal, scalar_product_calculator):
+    for key in crystal.KGrid:
+        norms = []
+        for index, (evalue, emode) in enumerate(crystal.Modes[key]):
+            norm_squared = scalar_product_calculator(emode, emode)
+            assert abs(norm_squared.imag) < 1e-10
+            emode *= 1 / math.sqrt(norm_squared.real)
