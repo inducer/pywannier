@@ -33,23 +33,6 @@ job.done()
 
 crystal = crystals[0]
 
-periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
-                                            crystal.Lattice.DirectLatticeBasis)
-
-for k_index in crystal.KGrid:
-    k = crystal.KGrid[k_index]
-    for evalue, mode in crystal.Modes[k_index]:
-        for gv, main_node, other_weights_and_nodes in periodicity_nodes:
-            my_sum = mode[main_node]
-            for node, weight in other_weights_and_nodes:
-                node_val = mode[node]
-                my_sum += -weight * cmath.exp(-1j * mtools.sp(gv, k)) * node_val
-            if abs(my_sum) > 1e-9:
-                print "WARNING: BC check failed by", abs(my_sum)
-                print k, main_node.Coordinates, gv
-                raw_input()
-sys.exit()
-
 job = fempy.stopwatch.tJob("localizing bands")
 bands = pc.findBands(crystal)
 job.done()
@@ -59,33 +42,30 @@ k_track = [0*rl[0],
            0.5*rl[0],
            0.5*(rl[0]+rl[1]),
            0*rl[0]]
-#pc.writeBandDiagram(",,band_diagram.data", crystal, bands,
-                    #tools.interpolateVectorList(k_track, 30))
+pc.writeBandDiagram(",,band_diagram.data", crystal, bands,
+                    tools.interpolateVectorList(k_track, 30))
 
-job = fempy.stopwatch.tJob("verifying bcs")
-for i, band in enumerate(bands):
-    for k_index in crystal.KGrid:
-        k = crystal.KGrid[k_index]
-        mode = band[k_index][1]
-        
-        for gv, main_node, other_weights_and_nodes in periodicity_nodes:
-            my_sum = mode[main_node]
-            print "START:", main_node.Coordinates, my_sum
-            for node, weight in other_weights_and_nodes:
-                print "FACTOR", weight, cmath.exp(-1j * mtools.sp(gv, k))
-                my_sum += -weight * cmath.exp(-1j * mtools.sp(gv, k)) * mode[node]
-                print "NEXT:", node.Coordinates, my_sum
-            if abs(my_sum) > 1e-9:
-                print "WARNING: BC check failed by", abs(my_sum)
-                print i, k, main_node.Coordinates, gv
-                raw_input()
-            else:
-                print
-job.done()
+multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
+                                   grid_vectors = crystal.Lattice.DirectLatticeBasis,
+                                   limits = [(-2,2)] * 2)
+
+dlb = crystal.Lattice.DirectLatticeBasis
+for k_index in crystal.KGrid:
+    k = crystal.KGrid[k_index]
+    print "k =",k
+
+    offsets_and_mesh_functions = []
+    for multicell_index in multicell_grid:
+        R = multicell_grid[multicell_index]
+
+        my_mode = cmath.exp(1.j * mtools.sp(k,R)) * bands[0][k_index][1]
+        offsets_and_mesh_functions.append((R, my_mode.real))
+    visualization.visualizeSeveralMeshes("vtk", 
+                                         (",,result.vtk", ",,result_grid.vtk"), 
+                                         offsets_and_mesh_functions)
+    raw_input("[enter for next]:")
 
 sys.exit(0)
-
-
 
 multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,

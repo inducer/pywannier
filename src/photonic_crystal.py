@@ -108,6 +108,18 @@ class tInvertedModeListLookerUpper:
 
 
 
+class tInvertedIdenticalLookerUpper:
+    def __init__(self, grid_interval_counts):
+        self._GridIntervalCounts = grid_interval_counts
+
+    def __call__(self, dictionary, failed_key):
+        new_key = tuple(map(lambda (idx, count): count-idx, 
+                            zip(failed_key, self._GridIntervalCounts)))
+        return dictionary[new_key]
+
+
+
+
 def findPeriodicityNodes(mesh, grid_vectors):
     bnodes = [node 
               for node in mesh.dofManager()

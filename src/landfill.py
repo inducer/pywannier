@@ -104,26 +104,25 @@ for k_index in crystal.KGrid:
 # bc verification
 periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
                                             crystal.Lattice.DirectLatticeBasis)
-job = fempy.stopwatch.tJob("verifying bcs")
-for i, band in enumerate(bands):
-    for k_index in crystal.KGrid:
-        k = crystal.KGrid[k_index]
-        mode = band[k_index][1]
-        
+
+for k_index in crystal.KGrid:
+    k = crystal.KGrid[k_index]
+    for evalue, mode in crystal.Modes[k_index]:
         for gv, main_node, other_weights_and_nodes in periodicity_nodes:
-            my_sum = main_node.getValue(mode)
+            my_sum = mode[main_node]
             for node, weight in other_weights_and_nodes:
-                my_sum += -weight * cmath.exp(-1j * mtools.sp(gv, k)) * node.getValue(mode)
+                node_val = mode[node]
+                my_sum += -weight * cmath.exp(-1j * mtools.sp(gv, k)) * node_val
             if abs(my_sum) > 1e-9:
-                print "WARNING: BC check failed"
-                print i, k, main_node.Coordinates, gv, "\n:   ", abs(my_sum)
-job.done()
+                print "WARNING: BC check failed by", abs(my_sum)
+                print k, main_node.Coordinates, gv
+                raw_input()
 
 # ---------------------------------------------------------
 # orthogonality verification
 
 for key in crystal.KGrid:
-    my_sp = crystal.ScalarProduct
+    my_sp = crystal.ScalarProduct[key]
 
     print "scalar products for k = ", crystal.KGrid[key]
     norms = []

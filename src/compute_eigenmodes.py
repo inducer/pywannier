@@ -30,28 +30,19 @@ def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
                                                             g = epsilon, 
                                                             typecode = num.Complex)
 
-    crystal.ScalarProduct = {}
+    crystal.ScalarProduct = eigensolver.massMatrix()
 
     for key in k_grid:
         k = k_grid[key]
-        
 
         if crystal.HasInversionSymmetry and k[0] < 0:
             # use inversion symmetry, only compute one half.
             continue
 
         print "computing for k =", k
-        modes, m = eigensolver.solve(sigma,
-                                     pc.getFloquetConstraints(periodicity_nodes, k))
-
-        crystal.ScalarProduct[k] = fempy.mesh_function.tScalarProductCalculator(m)
-        crystal.Modes[key] = modes
-    for key in k_grid:
-        print "k=", k_grid[key]
-        for ev, mode in crystal.Modes[key]:
-            print id(mode.nodeConstraints())
-
-
+        crystal.Modes[key] = eigensolver.solve(
+            sigma,
+            pc.getFloquetConstraints(periodicity_nodes, k))
 
 
 
@@ -135,7 +126,7 @@ def main():
                                                     epsilon,
                                                     a*inner_radius,
                                                     refine_steps = 0, # 4
-                                                    k_grid_points = 4)
+                                                    k_grid_points = 8)
     job = fempy.stopwatch.tJob("saving")
     cPickle.dump(crystals, file(",,crystal.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
     job.done()
