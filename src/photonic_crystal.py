@@ -286,7 +286,7 @@ def findBands(crystal, scalar_product_calculator):
                        for index in indices
                        if distances[index] < 2 * best_dist]
 
-        if k_index == (7,0):
+        if k_index == (7,0) and tied_values == [1,2]:
             print "NULLSIEBEN"
             print "evalues", [(index, modes[k_index][index][0]) for index in indices]
             print "dists", [(index, distances[index]) for index in indices]
@@ -294,6 +294,7 @@ def findBands(crystal, scalar_product_calculator):
             print "joint", [(index, joint_scores[index]) for index in indices]
             print tied_values
             raw_input()
+            return 1 # nudge!
 
         if len(tied_values) == 1:
             # no other tied values, push out result
