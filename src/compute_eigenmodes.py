@@ -99,7 +99,7 @@ def main():
     fempy.stopwatch.HIDDEN_JOBS.append("shift matrix")
 
     a = 1.
-    my_lattice = pc.tBravaisLattice([a*num.array([1,0], num.Float), a*num.array([0,1], num.Float)])
+    my_lattice = pc.tBravaisLattice([num.array([a,0], num.Float), num.array([0,a], num.Float)])
     crystal = computeEigenmodesForStandardUnitCell(my_lattice, a*0.18)
     job = fempy.stopwatch.tJob("saving")
     cPickle.dump(crystal, file(",,crystal.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)

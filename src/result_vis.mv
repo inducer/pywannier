@@ -1,0 +1,110 @@
+### DataVizManagers ###
+2
+### 1. DataVizManager ###
+### VtkDataReader ###
+VtkDataReader
+,,result.vtk
+vtkPolyDataReader
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetReadFromInputString', 0), ('SetReleaseDataFlag', 0), ('SetFileName', ',,result.vtk'), ('SetProgress', 1.0), ('SetScalarsName', 'node_data')]
+### End of VtkDataReader ###
+### ModuleManagers ###
+1
+### 1. ModuleManager ###
+### Scalar Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.0099999997764825821, 0.15000000596046448, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.14000000059604645, 0.85000002384185791, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': (-0.63331753015518188, 0.31043994426727295), 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/fempy/test/result_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (-0.67052417993545532, 0.00079890456981956959)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 1, 'SetHeight': 0.85000002384185791, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.14000000059604645, 0.85000002384185791), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.0099999997764825821, 0.15000000596046448), 'SetWidth': 0.14000000059604645, 'SetTitle': 'node_data', 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End of Scalar Lookup Table ###
+### Vector Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/fempy/test/result_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End Vector Lookup Table ###
+### Filters ###
+1
+### 1. WarpScalar ###
+WarpScalar
+vtkWarpScalar
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetReleaseDataFlag', 0), ('SetUseNormal', 0), ('SetXYPlane', 0), ('SetNormal', (0.0, 0.0, 1.0)), ('SetProgress', 1.0), ('SetScaleFactor', 1.0)]
+### End of 1. WarpScalar ###
+### End of Filters ###
+### Modules ###
+2
+### 1. PolyData ###
+PolyData
+vtkOpenGLPolyDataMapper
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGlobalImmediateModeRendering', 0), ('SetImmediateModeRendering', 0), ('SetScalarVisibility', 1), ('SetUseLookupTableScalarRange', 0), ('SetColorMode', 0), ('SetResolveCoincidentTopology', 2), ('SetScalarMode', 0), ('SetGhostLevel', 0), ('SetNumberOfPieces', 1), ('SetNumberOfSubPieces', 1), ('SetPiece', 0), ('SetProgress', 0.0), ('SetRenderTime', 0.0), ('SetResolveCoincidentTopologyZShift', 0.01), ('SetScalarRange', (-0.67052417993545532, 0.00079890456981956959))]
+vtkOpenGLActor
+[('SetDebug', 0), ('SetDragable', 1), ('SetPickable', 1), ('SetVisibility', 1), ('SetOrientation', (0.0, -0.0, 0.0)), ('SetOrigin', (0.0, 0.0, 0.0)), ('SetPosition', (0.0, 0.0, 0.0)), ('SetScale', (1.0, 1.0, 1.0))]
+vtkOpenGLProperty
+[('SetBackfaceCulling', 0), ('SetDebug', 0), ('SetEdgeVisibility', 0), ('SetFrontfaceCulling', 0), ('SetInterpolation', 1), ('SetRepresentation', 2), ('SetAmbient', 0.0), ('SetAmbientColor', (0.0, 0.10000000149011612, 0.80000001192092896)), ('SetColor', (0.0, 0.10000000149011612, 0.80000001192092896)), ('SetDiffuse', 1.0), ('SetDiffuseColor', (0.0, 0.10000000149011612, 0.80000001192092896)), ('SetEdgeColor', (1.0, 1.0, 1.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 1.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0), ('SetSpecular', 0.0), ('SetSpecularColor', (0.0, 0.10000000149011612, 0.80000001192092896)), ('SetSpecularPower', 1.0)]
+### End of 1. PolyData ###
+### 2. Axes ###
+Axes
+vtkCubeAxesActor2D
+[('SetBold', 1), ('SetDebug', 0), ('SetDragable', 1), ('SetItalic', 1), ('SetPickable', 1), ('SetScaling', 0), ('SetShadow', 0), ('SetUseRanges', 0), ('SetVisibility', 1), ('SetXAxisVisibility', 1), ('SetYAxisVisibility', 1), ('SetZAxisVisibility', 1), ('SetFlyMode', 1), ('SetFontFamily', 0), ('SetBounds', (-0.5, 0.5, -0.5, 0.5, -0.63331753015518188, 0.31043994426727295)), ('SetCornerOffset', 0.0), ('SetFontFactor', 0.69999998807907104), ('SetHeight', 0.5), ('SetInertia', 1.0), ('SetLabelFormat', '%-#6.3g'), ('SetLayerNumber', 0), ('SetNumberOfLabels', 3), ('SetPosition', (0.0, 0.0)), ('SetPosition2', (0.5, 0.5)), ('SetWidth', 0.5), ('SetXLabel', 'X'), ('SetYLabel', 'Y'), ('SetZLabel', 'Z')]
+vtkProperty2D
+[('SetDebug', 0), ('SetDisplayLocation', 1), ('SetColor', (0.0, 0.0, 0.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 1.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0)]
+### End of 2. Axes ###
+### End of Modules ###
+### End of 1. ModuleManager ###
+### End of ModuleManagers ###
+### End of 1. DataVizManager ###
+### 2. DataVizManager ###
+### VtkDataReader ###
+VtkDataReader
+,,result_grid.vtk
+vtkPolyDataReader
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetReadFromInputString', 0), ('SetReleaseDataFlag', 0), ('SetFileName', ',,result_grid.vtk'), ('SetProgress', 1.0), ('SetScalarsName', 'node_data')]
+### End of VtkDataReader ###
+### ModuleManagers ###
+1
+### 1. ModuleManager ###
+### Scalar Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': (-0.63331753015518188, 0.31043994426727295), 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/fempy/test/result_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (-0.63331753015518188, 0.31043994426727295)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetTitle': 'node_data', 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End of Scalar Lookup Table ###
+### Vector Lookup Table ###
+{'v_range_on_var': 0, 'sc_bar_pos_config': {'vtkCoordinate': {'SetValue': (0.10000000149011612, 0.0099999997764825821, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_pos2_config': {'vtkCoordinate': {'SetValue': (0.80000001192092896, 0.14000000059604645, 0.0), 'SetDebug': 0, 'SetCoordinateSystem': 3}}, 'sc_bar_prop_config': {'vtkProperty2D': {'SetPointSize': 1.0, 'SetLineStippleRepeatFactor': 1, 'SetColor': (0.0, 0.0, 0.0), 'SetOpacity': 1.0, 'SetLineStipplePattern': 65535, 'SetDebug': 0, 'SetLineWidth': 1.0, 'SetDisplayLocation': 1}}, 'visible_data_range': [0.0, 1.0], 'reverse_lut_var': 0, 'base_file_name': '/home/ak/diplomarbeit/software/fempy/test/result_vis.mv', 'rel_file_name': '', 'range_on_var': 0, 'lut_config': {'vtkLookupTable': {'SetVectorMode': 1, 'SetHueRange': (0.66670000553131104, 0.0), 'SetScale': 0, 'SetNumberOfTableValues': 256, 'SetSaturationRange': (1.0, 1.0), 'SetAlphaRange': (1.0, 1.0), 'SetRamp': 2, 'SetAlpha': 1.0, 'SetDebug': 0, 'SetValueRange': (1.0, 1.0), 'SetNumberOfColors': 256, 'SetVectorComponent': 0, 'SetTableRange': (0.0, 1.0)}}, 'sc_bar_config': {'vtkScalarBarActor': {'SetOrientation': 0, 'SetHeight': 0.14000000059604645, 'SetNumberOfLabels': 8, 'SetBold': 1, 'SetLabelFormat': '%-#6.3g', 'SetDragable': 1, 'SetMaximumNumberOfColors': 64, 'SetPosition2': (0.80000001192092896, 0.14000000059604645), 'SetLayerNumber': 0, 'SetShadow': 0, 'SetFontFamily': 0, 'SetVisibility': 0, 'SetPickable': 1, 'SetItalic': 1, 'SetPosition': (0.10000000149011612, 0.0099999997764825821), 'SetWidth': 0.80000001192092896, 'SetDebug': 0}}, 'file_name': '', 'lut_var': 1}
+### End Vector Lookup Table ###
+### Filters ###
+1
+### 1. WarpScalar ###
+WarpScalar
+vtkWarpScalar
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetReleaseDataFlag', 0), ('SetUseNormal', 0), ('SetXYPlane', 0), ('SetNormal', (0.0, 0.0, 1.0)), ('SetProgress', 1.0), ('SetScaleFactor', 1.0)]
+### End of 1. WarpScalar ###
+### End of Filters ###
+### Modules ###
+1
+### 1. PolyData ###
+PolyData
+vtkOpenGLPolyDataMapper
+[('SetAbortExecute', 0), ('SetDebug', 0), ('SetGlobalImmediateModeRendering', 0), ('SetImmediateModeRendering', 0), ('SetScalarVisibility', 0), ('SetUseLookupTableScalarRange', 0), ('SetColorMode', 0), ('SetResolveCoincidentTopology', 2), ('SetScalarMode', 0), ('SetGhostLevel', 0), ('SetNumberOfPieces', 1), ('SetNumberOfSubPieces', 1), ('SetPiece', 0), ('SetProgress', 0.0), ('SetRenderTime', 0.0), ('SetResolveCoincidentTopologyZShift', 0.01), ('SetScalarRange', (0.0, 1.0686569213867188))]
+vtkOpenGLActor
+[('SetDebug', 0), ('SetDragable', 1), ('SetPickable', 1), ('SetVisibility', 1), ('SetOrientation', (0.0, -0.0, 0.0)), ('SetOrigin', (0.0, 0.0, 0.0)), ('SetPosition', (0.0, 0.0, 0.0)), ('SetScale', (1.0, 1.0, 1.0))]
+vtkOpenGLProperty
+[('SetBackfaceCulling', 0), ('SetDebug', 0), ('SetEdgeVisibility', 0), ('SetFrontfaceCulling', 0), ('SetInterpolation', 1), ('SetRepresentation', 1), ('SetAmbient', 0.0), ('SetAmbientColor', (0.0, 0.0, 0.0)), ('SetColor', (0.0, 0.0, 0.0)), ('SetDiffuse', 1.0), ('SetDiffuseColor', (0.0, 0.0, 0.0)), ('SetEdgeColor', (1.0, 1.0, 1.0)), ('SetLineStipplePattern', 65535), ('SetLineStippleRepeatFactor', 1), ('SetLineWidth', 1.0), ('SetOpacity', 1.0), ('SetPointSize', 1.0), ('SetSpecular', 0.0), ('SetSpecularColor', (0.0, 0.0, 0.0)), ('SetSpecularPower', 1.0)]
+### End of 1. PolyData ###
+### End of Modules ###
+### End of 1. ModuleManager ###
+### End of ModuleManagers ###
+### End of 2. DataVizManager ###
+### End of DataVizManagers ###
+### RenderWindow ###
+vtkOpenGLRenderer
+[('SetBackingStore', 0), ('SetDebug', 0), ('SetInteractive', 1), ('SetLightFollowCamera', 1), ('SetTwoSidedLighting', 1), ('SetAllocatedRenderTime', 10000.0), ('SetAmbient', (1.0, 1.0, 1.0)), ('SetAspect', (1.1787818670272827, 1.0)), ('SetBackground', (1.0, 1.0, 1.0)), ('SetDisplayPoint', (423.46630859375, 393.58340454101562, 0.28992545604705811)), ('SetLayer', 0), ('SetPixelAspect', (1.0, 1.0)), ('SetViewPoint', (0.48513278365135193, 0.54649662971496582, 0.28992545604705811)), ('SetViewport', (0.0, 0.0, 1.0, 1.0)), ('SetWorldPoint', (0.5, 0.5, 0.31043994426727295, 1.0))]
+vtkOpenGLCamera
+[('SetDebug', 0), ('SetParallelProjection', 1), ('SetUseHorizontalViewAngle', 1), ('SetClippingRange', (2.1919678757598491, 5.0589275302032197)), ('SetDistance', 3.4575192928314213), ('SetEyeAngle', 2.0), ('SetFocalDisk', 1.0), ('SetFocalPoint', (0.0, 0.0, -0.16143879294395447)), ('SetParallelScale', 1.0), ('SetPosition', (0.46325317454296611, -0.63699327852272136, 3.2051731121758249)), ('SetRoll', -5.4527093025719982), ('SetThickness', 2.8669596544433706), ('SetViewAngle', 30.0), ('SetViewPlaneNormal', (0.13398426308233272, -0.18423419352812251, 0.97370733754107375)), ('SetViewShear', (0.0, 0.0, 1.0)), ('SetViewUp', (-0.069136369694122873, 0.97843480052604259, 0.19464198803208152)), ('SetWindowCenter', (0.0, 0.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 1), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.5, 0.70710676908493042, 0.5))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 1), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 0.60000002384185791), ('SetPosition', (-0.75, -0.5, 0.4330126941204071))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 1), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 0.5), ('SetPosition', (0.75, -0.5, 0.4330126941204071))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+vtkOpenGLLight
+[('SetDebug', 0), ('SetPositional', 0), ('SetSwitch', 0), ('SetLightType', 2), ('SetAttenuationValues', (1.0, 0.0, 0.0)), ('SetColor', (1.0, 1.0, 1.0)), ('SetConeAngle', 30.0), ('SetExponent', 1.0), ('SetFocalPoint', (0.0, 0.0, 0.0)), ('SetIntensity', 1.0), ('SetPosition', (0.0, 6.1230317691118863e-17, 1.0))]
+### End of RenderWindow ###

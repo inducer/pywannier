@@ -76,3 +76,49 @@ pc.writeBandDiagram(",,band_diagram.data", crystal, bands,
 
 # ---------------------------------------------------------
 pc.visualizeBandsVTK(",,bands.vtk", crystal, bands[0:4])
+
+# ---------------------------------------------------------
+# visualize bloch functions
+
+for k_index in crystal.KGrid:
+    k = crystal.KGrid[k_index]
+    print "k =",k
+
+    omv = []
+    for multicell_index in multicell_grid:
+        R = multicell_grid[multicell_index]
+        print "R = ", R
+
+        my_mode = cmath.exp(1.j * mtools.sp(k,R)) * bands[0][k_index][1]
+        factor = cmath.exp(1.j * mtools.sp(dlb[1], k))
+        print "bl = ", my_mode[bottom_left_node_number]
+        print "tl = ", my_mode[top_left_node_number]
+        print "bl * factor = ", my_mode[bottom_left_node_number] * factor
+        print "factor = ", factor
+              
+
+        omv.append((R, crystal.Mesh, my_mode.real))
+    visualization.visualizeSeveralMeshes("vtk", 
+                                         (",,result.vtk", ",,result_grid.vtk"), 
+                                         omv)
+    raw_input("[enter for next]:")
+
+# ---------------------------------------------------------
+# bc verification
+if False:
+    periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
+                                                crystal.Lattice.DirectLatticeBasis)
+    job = fempy.stopwatch.tJob("verifying bcs")
+    for i, band in enumerate(bands):
+        for k_index in crystal.KGrid:
+            k = crystal.KGrid[k_index]
+            mode = band[k_index][1]
+            
+            for gv, main_node, other_weights_and_nodes in periodicity_nodes:
+                my_sum = mode[main_node.Number]
+                for node, weight in other_weights_and_nodes:
+                    my_sum += -weight * cmath.exp(-1j * mtools.sp(gv, k)) * mode[node.Number]
+                    if abs(my_sum) > 1e-9:
+                        print "WARNING: BC check failed"
+                        print i, k, main_node.Coordinates, gv, "\n:   ", abs(my_sum)
+    job.done()

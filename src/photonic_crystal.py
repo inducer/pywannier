@@ -87,7 +87,6 @@ def findPeriodicityNodes(mesh, grid_vectors):
 
     periodicity_nodes = []
     for node in bnodes:
-        matches_made = 0
         for gv in grid_vectors:
             ideal_point = node.Coordinates + gv
             dist_threshold = tools.norm2(gv) * 0.3
@@ -144,7 +143,7 @@ def findPeriodicityNodes(mesh, grid_vectors):
 def computeFloquetBCs(periodicity_nodes, k):
     result = []
     for gv, node, other_nodes in periodicity_nodes:
-        floquet_factor = cmath.exp(1j * num.innerproduct(gv, k))
+        floquet_factor = cmath.exp(-1j * num.innerproduct(gv, k))
         my_condition = [(node,1)]
         for other_node, factor in other_nodes:
             my_condition.append((other_node, -factor*floquet_factor))
@@ -199,7 +198,7 @@ def findBands(crystal):
 
         first = True
 
-        for i,j in k_grid.asSequence().getAllIndices():
+        for i,j in k_grid:
             k = k_grid[i,j]
             if crystal.HasInversionSymmetry and k[0] < 0:
                 continue
@@ -247,7 +246,6 @@ def findBands(crystal):
 
 def visualizeBandsGnuplot(filename, crystal, bands):
     k_grid = crystal.KGrid
-    all_indices = k_grid.asSequence().getAllIndices()
     out_file = file(filename, "w")
 
     def scale_eigenvalue(ev):
@@ -274,7 +272,6 @@ def visualizeBandsGnuplot(filename, crystal, bands):
 def visualizeBandsVTK(filename, crystal, bands):
     import pyvtk
     k_grid = crystal.KGrid
-    out_file = file(filename, "w")
 
     nodes = []
     quads = []
@@ -298,7 +295,8 @@ def visualizeBandsVTK(filename, crystal, bands):
     
     for band in bands:
         node_lookup = {}
-        k_grid.forEachGridPoint(makeNode)
+        for k_index in k_grid:
+            makeNode(k_index)
         k_grid.forEachBlock(makeQuad)
 
     structure = pyvtk.PolyData(points = nodes, polygons = quads)
