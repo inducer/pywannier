@@ -6,7 +6,7 @@ import pylinear.matrices as num
 import pylinear.linear_algebra as la
 import pylinear.matrix_tools as mtools
 
-import Numeric
+import scipy.optimize
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -190,13 +190,14 @@ def omegaD(scalar_products, wannier_centers = None):
         wannier_centers = wannierCenters(scalar_products)
 
     omega_d = 0.
-    for ii in crystal.KGrid.chopUpperBoundary():
-        for kgii_index, kgii in enumerate(k_grid_index_increments):
-            b = k_grid_increments[kgii_index]
-            for n in range(n_bands):
-                imln = cmath.log(scalar_products[ii, kgii][n,n]).imag
-                omega_d += k_weights[kgii_index] * \
-                        (imln + mtools.sp(wannier_centers[n], b))**2
+    for n in range(n_bands):
+        for ii in crystal.KGrid.chopUpperBoundary():
+            for kgii_index, kgii in enumerate(k_grid_index_increments):
+                b = k_grid_increments[kgii_index]
+
+                omega_d += k_weights[kgii_index] \
+                           * (cmath.log(scalar_products[ii,kgii][n,n]).imag \
+                              + mtools.sp(wannier_centers[n], b))**2
     return omega_d / N
 
 def spreadFunctional2(scalar_products, wannier_centers = None):
@@ -204,15 +205,18 @@ def spreadFunctional2(scalar_products, wannier_centers = None):
            omegaOD(scalar_products) + \
            omegaD(scalar_products, wannier_centers)
 
-def spreadFunctionalGradient(scalar_products):
+def spreadFunctionalGradient(scalar_products, wannier_centers = None):
     mm = num.matrixmultiply
+
+    if wannier_centers is None:
+        wannier_centers = wannierCenters(scalar_products)
 
     gradient = {}
     for ii in crystal.KGrid.chopUpperBoundary():
         k = crystal.KGrid[ii]
         result = num.zeros((n_bands, n_bands), num.Complex)
         for kgii_index, kgii in enumerate(k_grid_index_increments):
-            m = current_scalar_products[ii, kgii]
+            m = scalar_products[ii, kgii]
             m_diagonal = num.diagonal(m)
             r = num.multiply(m, m_diagonal)
             r_tilde = num.divide(m, m_diagonal)
@@ -229,33 +233,50 @@ def spreadFunctionalGradient(scalar_products):
         gradient[ii] = result
     return gradient
 
+def getMixMatrix(prev_mix_matrix, factor, gradient):
+    mm = num.matrixmultiply
+
+    temp_mix_matrix = pc.makeKPeriodicLookupStructure(crystal.KGrid)
+    for ii in crystal.KGrid.chopUpperBoundary():
+        dW = factor * gradient[ii]
+        exp_dW = mtools.matrixExpByDiagonalization(dW)
+        temp_mix_matrix[ii] = mm(prev_mix_matrix[ii], exp_dW)
+    return temp_mix_matrix
+
 def run():
-    alpha = 0.5
+    mm = num.matrixmultiply
+
     iteration = 0
+
+    orig_sps = computeOffsetScalarProducts(crystal, bands)
+    print "sf1", spreadFunctional(orig_sps)
+    print "sf2", spreadFunctional2(orig_sps)
 
     mix_matrix = {}
     for ii in crystal.KGrid.chopUpperBoundary():
         mix_matrix[ii] = num.identity(n_bands, num.Complex)
-
-    sps = computeOffsetScalarProducts(crystal, bands)
-    print "sf1", spreadFunctional(sps)
-    print "sf2", spreadFunctional2(sps)
-
-    sys.exit()
+    mix_matrix = pc.makeKPeriodicLookupStructure(crystal.KGrid, mix_matrix)
 
     while True:
         print "--------------------------------------------------"
         print "ITERATION %d" % iteration
         print "--------------------------------------------------"
-        gradient_norm = 0.
         
-        gradient_norm += mtools.frobeniusNorm(gradient)
-        dW = alpha / (k_weight_sum * 4) * gradient
-        exp_dW = mtools.matrixExpByDiagonalization(dW)
+        sps = updateOffsetScalarProducts(orig_sps, mix_matrix)
+        print "spread_func:", spreadFunctional(sps)
+        gradient = spreadFunctionalGradient(sps)
 
-        mix_matrix[ii] = mm(mix_matrix[ii], exp_dW)
+        def minfunc(x):
+            temp_mix_matrix = getMixMatrix(mix_matrix, x, gradient)
+            temp_sps = updateOffsetScalarProducts(orig_sps, temp_mix_matrix)
+            result = spreadFunctional(temp_sps)
+            print "try", x, result
+            return result
 
-        print gradient_norm
+        xmin = scipy.optimize.brent(minfunc, brack = (-1e-1, 1e-1))
+
+        mix_matrix = getMixMatrix(mix_matrix, xmin, gradient)
+
         iteration += 1
 
 run()

@@ -120,6 +120,24 @@ class tInvertedIdenticalLookerUpper:
 
 
 
+class tKPeriodicLookerUpper:
+    def __init__(self, k_grid):
+        self._KGrid = k_grid
+
+    def __call__(self, dictionary, failed_key):
+        return dictionary[self._KGrid.chopUpperBoundary()
+                          .reducePeriodically(failed_key)]
+
+
+
+
+def makeKPeriodicLookupStructure(k_grid, dictionary = {}):
+    return tools.tDependentDictionary(tKPeriodicLookerUpper(k_grid), 
+                                      dictionary)
+
+
+
+
 def findPeriodicityNodes(mesh, grid_vectors):
     bnodes = [node 
               for node in mesh.dofManager()
@@ -238,9 +256,7 @@ def findBands(crystal):
         else:
             band = {}
 
-        band = tools.tDependentDictionary(
-            lambda dic, key: dic[k_grid.reducePeriodically(key)],
-            band)
+        band = makeKPeriodicLookupStructure(k_grid, band)
 
         first = True
 
@@ -386,3 +402,7 @@ def writeBandDiagram(filename, crystal, bands, k_vectors):
                                          scale_eigenvalue(value),
                                          dist))
         band_diagram_file.write("\n")
+
+
+
+
