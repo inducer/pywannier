@@ -6,3 +6,7 @@ class tEigenmodes:
   def addKValue(self, k, values, vectors):
     self.KValues.append((k, values, vectors))
 
+
+
+
+

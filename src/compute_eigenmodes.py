@@ -15,6 +15,7 @@ import fempy.tools as tools
 
 # Local imports ---------------------------------------------------------------
 import eigenmodes
+import lattice
  
 
 
@@ -94,9 +95,8 @@ def computeFloquetBCs(periodicity_nodes, k):
 
 
 
-def unitCellDemo(mesh, epsilon, sigma, list_of_ks):
-  grid_vectors = [num.array([1,0], num.Float), num.array([0,1], num.Float)]
-  periodicity_nodes = findPeriodicityNodes(mesh, grid_vectors)
+def unitCellDemo(mesh, epsilon, sigma, list_of_ks, lattice):
+  periodicity_nodes = findPeriodicityNodes(mesh, lattice.DirectLatticeBasis)
 
   eigensolver = fempy.solver.tLaplacianEigenproblemSolver(mesh, 
                                                           g = epsilon, 
@@ -113,15 +113,16 @@ def unitCellDemo(mesh, epsilon, sigma, list_of_ks):
 
   return results
 
-  band_diagram_file = file(",,band_diagram.data", "w")
-  for index, (k, result) in tools.indexAnd(results):
-    for val in result.RitzValues:
-      band_diagram_file.write("%d\t%f\n" % (index, math.sqrt(val.real)))
+  #band_diagram_file = file(",,band_diagram.data", "w")
+  #for index, (k, result) in tools.indexAnd(results):
+    #for val in result.RitzValues:
+      #band_diagram_file.write("%d\t%f\n" % (index, math.sqrt(val.real)))
 
 
 
 
-def computeEigenmodesForStandardUnitCell(inner_radius = 0.18):
+      
+def computeEigenmodesForStandardUnitCell(lattice, inner_radius):
   def needsRefinement( vert_origin, vert_destination, vert_apex, area ):
     return area >= 1e-2
     bary_x = ( vert_origin.x() + vert_destination.x() + vert_apex.x() ) / 3
@@ -135,8 +136,8 @@ def computeEigenmodesForStandardUnitCell(inner_radius = 0.18):
 
   job = fempy.stopwatch.tJob("geometry")
   mesh = fempy.mesh.tTwoDimensionalMesh(
-    fempy.geometry.getUnitCellGeometry(edge_length = 1, 
-                                       inner_factor = inner_radius,
+    fempy.geometry.getUnitCellGeometry(lattice.DirectLatticeBasis, 
+                                       inner_radius = inner_radius,
                                        use_exact = False,
                                        constraint_id = "floquet"),
     refinement_func = needsRefinement)
@@ -150,17 +151,22 @@ def computeEigenmodesForStandardUnitCell(inner_radius = 0.18):
 
   sigma = 0.9
   
-  raw_ks = [
-    num.array([0,0], num.Float),
-    num.array([math.pi,0], num.Float),
-    num.array([math.pi,math.pi], num.Float),
-    num.array([0,0], num.Float)]
-  return unitCellDemo(mesh, epsilon, sigma, 
-               tools.interpolateVectorList(raw_ks, 20))
+  rl = lattice.ReciprocalLattice
+  #raw_ks = [0 * rl[0], 0.5 * rl[0], 0.5 * (rl[0]+rl[1]), 0 * rl[0]]
+  #all_ks = tools.interpolateVectorList(raw_ks, 20)
+
+  list_of_ks = tools.getGrid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
+                             [4] * len (lattice.ReciprocalLattice))
+  return unitCellDemo(mesh, epsilon, sigma, list_of_ks, lattice)
 
 
 
-results = computeEigenmodesForStandardUnitCell()
-job = fempy.stopwatch.tJob("saving")
-cPickle.dump(results, file(",,eigenmodes.pickle", "w"), cPickle.HIGHEST_PROTOCOL)
-job.done()
+def main():
+  a = 1.
+  my_lattice = lattice.tLattice([a*num.array([1,0], num.Float), a*num.array([0,1], num.Float)])
+  results = computeEigenmodesForStandardUnitCell(my_lattice, a*0.18)
+  job = fempy.stopwatch.tJob("saving")
+  cPickle.dump((my_lattice, results), file(",,eigenmodes.pickle", "w"), cPickle.HIGHEST_PROTOCOL)
+  job.done()
+
+main()

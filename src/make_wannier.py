@@ -8,10 +8,11 @@ import fempy.stopwatch
 
 # Local imports ---------------------------------------------------------------
 import eigenmodes
+import lattice
 
 job = fempy.stopwatch.tJob("loading")
-results = cPickle.load(file(",,eigenmodes.pickle", "r"))
+lattice, eigenmodes = cPickle.load(file(",,eigenmodes.pickle", "r"))
 job.done()
-print results
 
-print len(results.Mesh.dofManager())
+
+print len(eigenmodes.Mesh.dofManager())
