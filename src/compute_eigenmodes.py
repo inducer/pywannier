@@ -29,7 +29,7 @@ def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
 
     crystal.ScalarProduct = eigensolver.massMatrix()
 
-    for k_index in k_grid.chopUpperBoundary():
+    for k_index in k_grid:
         k = k_grid[k_index]
 
         if crystal.HasInversionSymmetry and k[0] > 0:
@@ -43,8 +43,8 @@ def computeEigenmodes(crystal, epsilon, sigma, k_grid, lattice):
 
     # make sure our symmetry lookups work
     for k_index in k_grid.enlargeAtBothBoundaries():
-        eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, 
-                                                              k_grid[k_index]))
+        k = k_grid[k_index]
+        eigensolver.setupConstraints(pc.getFloquetConstraints(periodicity_nodes, k))
         for evalue, emode in crystal.Modes[k_index]:
             assert eigensolver.computeEigenpairResidual(evalue, emode) < 1e-9
 
@@ -82,7 +82,9 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
     # otherwise k=0 ends up on the grid. k=0 means zero frequency,
     # so no eigenvalues. Arpack will still compute some, but they
     # are garbage.
-    k_grid  = tools.makeSubdivisionGrid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
+
+    # This ends up being a genuine Monkhorst-Pack mesh.
+    k_grid  = tools.makeCellCenteredGrid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
                                         [(0, k_grid_points)] * 2)
 
     crystals = []

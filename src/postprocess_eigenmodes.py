@@ -20,6 +20,8 @@ def run():
         pc.normalizeModes(crystal, spc)
         job.done()
 
+        print "degeneracies:", pc.findDegeneracies(crystal)
+
         job = fempy.stopwatch.tJob("finding bands")
         crystal.Bands = pc.findBands(crystal, spc)
         job.done()

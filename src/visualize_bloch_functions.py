@@ -44,6 +44,10 @@ for band_index, band in enumerate(crystal.Bands):
         break_k = False
         while True:
             print "band = ", band_index, "k =",k
+            my_evalue, bloch_mode = band[k_index]
+            my_evalue2, periodic_mode = crystal.PeriodicBands[band_index][k_index]
+            assert abs(my_evalue-my_evalue2) < 1e-10
+            print "eigenvalue", my_evalue
             value = raw_input("[p for psi, u for u, b for next band, empty for next]:")
             if value == "":
                 break
@@ -58,9 +62,9 @@ for band_index, band in enumerate(crystal.Bands):
                     R = multicell_grid[multicell_index]
 
                     if value == "p":
-                        my_mode = cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
+                        my_mode = bloch_mode * cmath.exp(1.j * mtools.sp(k, R))
                     else:
-                        my_mode = crystal.PeriodicBands[band_index][k_index][1]
+                        my_mode = periodic_mode
                     f_on_grid[multicell_index] = my_mode.imaginary
                 pc.visualizeGridFunction(multicell_grid, f_on_grid)
 
