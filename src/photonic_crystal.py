@@ -129,6 +129,8 @@ class tKPeriodicLookerUpper:
         self._KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
+        redkey = self._KGrid.chopUpperBoundary().reducePeriodically(failed_key)
+        print "reducing", failed_key, "->", redkey
         return dictionary[self._KGrid.chopUpperBoundary()
                           .reducePeriodically(failed_key)]
 
@@ -231,43 +233,85 @@ class tBand:
 
 
 
-def findBands(crystal):
+def findBands(crystal, scalar_product_calculator):
+    """Requires the eigenmodes to have norm 1.
+
+    Returns a list of tBand objects.
+    """
     k_grid = crystal.KGrid
-    k_grid_point_counts = k_grid.gridPointCounts()
     modes = crystal.Modes
     all_dirs = tools.enumerateBasicDirections(2)
+    spc = scalar_product_calculator
     
     taken_eigenvalues = tools.tDictionaryWithDefault(lambda key: [])
 
+    def findNeighbors(k_index, k_index_increment, max_count, band):
+        result = []
+        reduced_k_grid = k_grid.chopUpperBoundary()
+        for step_count in range(max_count):
+            k_index = reduced_k_grid.reducePeriodically(
+                tools.addTuples(k_index, k_index_increment))
+
+            if k_index in band:
+                result.append(k_index)
+            else:
+                return result
+        return result
+
+    def findClosestAt(k_index, eigenvalues, eigenmodes):
+        indices = range(len(modes[k_index]))
+
+        # erase taken indices from possible choices
+        taken = taken_eigenvalues[k_index]
+        taken.sort()
+        for i in taken[-1::-1]:
+            indices.pop(i)
+
+        distances = {}
+        sps = {}
+        joint_scores = {}
+        for index in indices:
+            evalue, emode = modes[k_index][index]
+            distances[index] = sum([abs(evalue-ref_evalue)**2 for ref_evalue in eigenvalues])
+            sps[index] = tools.average([abs(spc(emode, ref_emode)) for ref_emode in eigenmodes])
+
+            # FIXME inherently bogus
+            # or, rather, needs parameter adjustment...
+            joint_scores[index] = len(eigenmodes)/(1e-20+sps[index]) + distances[index]
+
+        best_index_evdist = indices[tools.argmin(indices, lambda i: distances[i])]
+        best_dist = distances[best_index_evdist]
+
+        tied_values = [index
+                       for index in indices
+                       if distances[index] < 2 * best_dist]
+
+        if k_index == (7,0):
+            print "NULLSIEBEN"
+            print "evalues", [(index, modes[k_index][index][0]) for index in indices]
+            print "dists", [(index, distances[index]) for index in indices]
+            print "sps", [(index, sps[index]) for index in indices]
+            print "joint", [(index, joint_scores[index]) for index in indices]
+            print tied_values
+            raw_input()
+
+        if len(tied_values) == 1:
+            # no other tied values, push out result
+            return best_index_evdist
+        else:
+            # use "joint score" as a tie breaker
+            best_index_joint = tied_values[tools.argmin(tied_values, 
+                                                        lambda i: joint_scores[i])]
+
+            #print "dists", [(index, distances[index]) for index in indices]
+            #print "sps", [(index, sps[index]) for index in indices]
+            #print "joint", [(index, joint_scores[index]) for index in indices]
+            #print "best_dist", best_index_evdist
+            #print "best_joint", best_index_joint
+            #raw_input()
+            return best_index_joint
+
     def findBand(band_index):
-        def findClosestAt(key, eigenvalues):
-            mk_values = map(lambda x: x[0], modes[key])
-            mk_values_with_indices = zip(range(len(mk_values)), mk_values)
-
-            # erase taken indices from possible choices
-            taken = taken_eigenvalues[key]
-            taken.sort()
-            for i in taken[-1::-1]:
-                mk_values_with_indices.pop(i)
-
-            distances = [(index, sum([abs(item-ev)**2 for ev in eigenvalues]))
-                         for index, item in mk_values_with_indices]
-            list_index = tools.argmin(distances, lambda (i, ev): ev)
-            return mk_values_with_indices[list_index][0]
-
-        def findNeighbors((i, j), (di, dj), max_count = 2):
-            result = []
-            for step_count in range(max_count):
-                i += di
-                j += dj
-                if 0 <= i < k_grid_point_counts[0] and \
-                     0 <= j < k_grid_point_counts[1] and \
-                     (i,j) in band:
-                    result.append((i,j))
-                else:
-                    return result
-            return result
-
         if crystal.HasInversionSymmetry:
             band = tools.tDependentDictionary(
                 tInvertedModeLookerUpper(k_grid.gridIntervalCounts()))
@@ -283,30 +327,44 @@ def findBands(crystal):
 
             if first:
                 band[k_index] = modes[k_index][band_index]
+                first = False
                 continue
             
             neighbor_sets = []
             guessed_eigenvalues = []
+            close_eigenmodes = []
             for direction in all_dirs:
-                neighbor_set = findNeighbors(k_index, tuple(direction))
-            if len(neighbor_set):
-                if len(neighbor_set) == 1:
+                neighbor_set = findNeighbors(k_index, tuple(direction), 3, band)
+                if len(neighbor_set) == 0:
+                    pass
+                elif len(neighbor_set) == 1:
+                    close_eigenmodes.append(band[neighbor_set[0]][1])
                     guessed_eigenvalues.append(band[neighbor_set[0]][0])
                 elif len(neighbor_set) == 2:
+                    close_eigenmodes.append(band[neighbor_set[0]][1])
+
+                    # linear approximation
                     closer_eigenvalue = band[neighbor_set[0]][0]
                     further_eigenvalue = band[neighbor_set[1]][0]
                     guessed_eigenvalues.append(2*closer_eigenvalue - further_eigenvalue)
                 elif len(neighbor_set) == 3:
+                    close_eigenmodes.append(band[neighbor_set[0]][1])
+
                     # quadratic approximation
                     closer_eigenvalue = band[neighbor_set[0]][0]
                     further_eigenvalue = band[neighbor_set[1]][0]
                     furthest_eigenvalue = band[neighbor_set[2]][0]
                     guessed_eigenvalues.append(3*closer_eigenvalue - 3*further_eigenvalue + furthest_eigenvalue)
                 else:
-                    raise RuntimeError, "unexpected neighbor set length"
-                index = findClosestAt(k_index, guessed_eigenvalues)
-                band[k_index] = modes[k_index][index]
-                taken_eigenvalues[k_index].append(index)
+                    raise RuntimeError, "unexpected neighbor set length %d at %s" % (
+                        len(neighbor_set), k_index)
+
+            assert len(guessed_eigenvalues) > 0
+            assert len(close_eigenmodes) > 0
+
+            index = findClosestAt(k_index, guessed_eigenvalues, close_eigenmodes)
+            band[k_index] = modes[k_index][index]
+            taken_eigenvalues[k_index].append(index)
         return band
 
     return [tBand(crystal, findBand(i)) for i in range(len(modes[0,0]))]

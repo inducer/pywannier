@@ -23,7 +23,7 @@ import fempy.visualization as visualization
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
 
-crystals = pickle.load(file(",,crystal_full.pickle", "rb"))
+crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 
 for crystal in crystals:
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 

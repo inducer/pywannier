@@ -18,7 +18,7 @@ def run():
         job.done()
 
         job = fempy.stopwatch.tJob("finding bands")
-        crystal.Bands = pc.findBands(crystal)
+        crystal.Bands = pc.findBands(crystal, spc)
         job.done()
 
         job = fempy.stopwatch.tJob("periodicizing bands")
@@ -27,7 +27,7 @@ def run():
         job.done()
 
     job = fempy.stopwatch.tJob("saving")
-    pickle.dump(crystals, file(",,crystal_full.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
+    pickle.dump(crystals, file(",,crystal_bands.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
     job.done()
 
 if __name__ == "__main__":

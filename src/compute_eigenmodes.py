@@ -70,6 +70,8 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
   
     rl = lattice.ReciprocalLattice
 
+    has_inversion_symmetry = True
+
     # make sure the grid has an even number of grid points,
     # otherwise k=0 ends up on the grid. k=0 means zero frequency,
     # so no eigenvalues. Arpack will still compute some, but they
@@ -81,7 +83,7 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
     while len(crystals) <= refine_steps:
         print "have %d elements" % len(mesh.elements())
         
-        if crystal.HasInversionSymmetry:
+        if has_inversion_symmetry:
             mode_dict = tools.tDependentDictionary(
                 pc.tInvertedModeListLookerUpper(k_grid.gridIntervalCounts()))
         else:
@@ -90,7 +92,7 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
         crystal = pc.tPhotonicCrystal(lattice, 
                                       mesh, 
                                       k_grid, 
-                                      has_inversion_symmetry = True, 
+                                      has_inversion_symmetry = has_inversion_symmetry, 
                                       epsilon = epsilon,
                                       modes_start = mode_dict,
                                       )
