@@ -400,7 +400,7 @@ def findBands(crystal, modes, scalar_product_calculator):
             taken_eigenvalues[k_index] = sets.Set()
             band_indices[k_index] = band_index
             
-        if False:
+        if True:
             print "WARNING: No-op findBands"
             return tBand(crystal, modes, band_indices)
 

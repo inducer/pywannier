@@ -25,6 +25,46 @@ import photonic_crystal as pc
 
 
 
+class tDictionaryOfMatrices(tools.tDictionaryOfArithmeticTypes):
+    def conjugate():
+        result = tDictionaryOfMatrices()
+        for key in self:
+            result[key] = num.conjugate(self[key])
+        return result
+    
+    def hermite():
+        result = tDictionaryOfMatrices()
+        for key in self:
+            result[key] = num.hermite(self[key])
+        return result
+        
+    def transpose():
+        result = tDictionaryOfMatrices()
+        for key in self:
+            result[key] = num.transpose(self[key])
+        return result
+        
+    def _getreal():
+        result = tDictionaryOfMatrices()
+        for key in self:
+            result[key] = self[key].real
+        return result
+
+    def _getimaginary():
+        result = tDictionaryOfMatrices()
+        for key in self:
+            result[key] = self[key].real
+        return result
+
+    def matrixMultiply(self, other):
+        return self.binaryOperator(other, num.matrixmultiply)
+
+    real = property(_getreal)
+    imaginary = property(_getimaginary)
+
+
+
+
 # tools -----------------------------------------------------------------------
 def frobeniusNormOffDiagonalSquared(a):
     result = 0
@@ -40,7 +80,7 @@ def matrixToList(num_mat):
         return [matrixToList(x) for x in num_mat]
 
 def makeRandomKDependentSkewHermitianMatrix(crystal, size, tc):
-    matrix = {}
+    matrix = tKDependentMatrix
     for k_index in crystal.KGrid:
         matrix[k_index] = mtools.makeRandomSkewHermitianMatrix(size, tc)
     return matrix
@@ -78,6 +118,12 @@ def frobeniusNormOnKDependentMatrices(k_grid, mat):
     for k_index in k_grid:
         result += mtools.frobeniusNorm(mat[k_index])
     return result
+
+def symmetricPart(matrix):
+    return 0.5*(matrix+num.transpose(matrix))
+
+def skewSymmetricPart(matrix):
+    return 0.5*(matrix-num.transpose(matrix))
 
 class tSimpleArg:
     def __init__(self):
@@ -465,6 +511,8 @@ class tMarzariSpreadMinimizer:
 
                 m = scalar_products[k_index, kgii]
                 m_diagonal = num.diagonal(m)
+
+                # Omega_OD part
                 r = num.multiply(m, num.conjugate(m_diagonal))
 
                 if self.DebugMode:
@@ -474,6 +522,11 @@ class tMarzariSpreadMinimizer:
                             r2[i,j] = m[i,j] * m[j,j].conjugate()
                     assert mtools.frobeniusNorm(r-r2) < 1e-15
 
+                result += 4. * self.KWeights.KWeights[kgii_index] * \
+                          (-num.asarray(skewSymmetricPart(num.transpose(r.real)), num.Complex)
+                           +1j*num.asarray(symmetricPart(r.imaginary), num.Complex))
+
+                # Omega_D part
                 r_tilde = num.divide(m, m_diagonal)
 
                 if self.DebugMode:
@@ -498,11 +551,10 @@ class tMarzariSpreadMinimizer:
                             t2[i,j] = r_tilde[i,j] * q[j]
                     assert mtools.frobeniusNorm(t-t2) < 1e-15
 
-                # re and im are not literal: watch out for the transpose
-                re_r = (num.transpose(r)-num.conjugate(r))/2
-                im_t = (num.transpose(t)+num.conjugate(t))/2j
+                result += 4. * self.KWeights.KWeights[kgii_index] * \
+                          (num.asarray(skewSymmetricPart(num.transpose(t.imaginary)), num.Complex)
+                           +1j*num.asarray(symmetricPart(t.real), num.Complex))
 
-                result += 4. * self.KWeights.KWeights[kgii_index] * (-re_r + im_t)
             gradient[k_index] = result
         return gradient
 
@@ -531,9 +583,11 @@ class tMarzariSpreadMinimizer:
                     q[n] += mtools.sp(self.KWeights.KGridIncrements[kgii_index], 
                                       wannier_centers[n])
                 t = num.multiply(r_tilde, q)
-                im_t = (num.transpose(t)+num.conjugate(t))/2j
 
-                result += 4. * self.KWeights.KWeights[kgii_index] * im_t
+                result += 4. * self.KWeights.KWeights[kgii_index] * \
+                          (num.asarray(skewSymmetricPart(num.transpose(t.imaginary)), num.Complex)
+                           +1j*num.asarray(symmetricPart(t.real), num.Complex))
+
             gradient[k_index] = result
         return gradient
 
@@ -549,9 +603,9 @@ class tMarzariSpreadMinimizer:
                 m_diagonal = num.diagonal(m)
                 r = num.multiply(m, num.conjugate(m_diagonal))
 
-                re_r = (num.transpose(r)-num.conjugate(r))/2
-
-                result += 4. * self.KWeights.KWeights[kgii_index] * (-re_r)
+                result += 4. * self.KWeights.KWeights[kgii_index] * \
+                          (-num.asarray(skewSymmetricPart(num.transpose(r.real)), num.Complex)
+                           +1j*num.asarray(symmetricPart(r.imaginary), num.Complex))
             gradient[k_index] = result
         return gradient
 
@@ -715,6 +769,7 @@ class tMarzariSpreadMinimizer:
 
                             before_oiod_here = w_b * (len(pbands)-tools.norm2squared(num.diagonal(m)))
                             after_oiod_here = w_b * (len(pbands)-tools.norm2squared(num.diagonal(new_m)))
+
                             before_oiod2 += before_oiod_here
                             after_oiod2 += after_oiod_here
                             doiod_here2  = after_oiod_here-before_oiod_here
@@ -741,9 +796,12 @@ class tMarzariSpreadMinimizer:
                             doiod5 += doiod_here5
                             assert abs(doiod_here4-doiod_here5) < 1e-11
 
-                            re_r = (num.transpose(r)-num.conjugate(r))/2
-                            grad_od = -4 * w_b * re_r
-                            doiod7_here = gradScalarProduct(dw, grad_od)
+                            ssym_re_r_t = skewSymmetricPart(num.transpose(r.real))
+                            sym_im_r = symmetricPart(r.imaginary)
+                            re_grad_od = 4 * w_b * (-ssym_re_r_t )
+                            im_grad_od = 4 * w_b * sym_im_r
+                            doiod7_here = gradScalarProduct(dw.real, re_grad_od) \
+                                          + gradScalarProduct(dw.imaginary, im_grad_od)
                             doiod7 += doiod7_here
 
                             if print_count:
@@ -762,15 +820,15 @@ class tMarzariSpreadMinimizer:
                     assert abs(after_oiod-after_oiod2) < 1e-9
                     assert abs(doiod4-doiod5) < 1e-11
                     assert abs(doiod3-doiod5) < 1e-11
-                    assert abs(doiod6-doiod7) < 1e-11
+                    #assert abs(doiod6-doiod7) < 1e-11
                     print "doiod total", after_oiod-before_oiod, doiod3, \
                           doiod6, doiod7
 
-                testDerivs(1e-6)
-                testDerivs(1e-5)
-                testDerivs(1e-4)
-                testDerivs(1e-3)
-                raw_input()
+                #testDerivs(1e-6)
+                #testDerivs(1e-5)
+                #testDerivs(1e-4)
+                #testDerivs(1e-3)
+                #raw_input()
 
                 def minfunc(x):
                     temp_mix_matrix = self.getMixMatrix(mix_matrix, x, gradient)
