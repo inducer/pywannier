@@ -1,4 +1,4 @@
-import math, cmath, sys, random, Numeric
+import math, cmath, sys, random, Numeric, operator
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
@@ -24,10 +24,6 @@ import photonic_crystal as pc
 
 
 
-
-def findNearestNode(mesh, point):
-    return tools.argmin(mesh.dofManager(),
-                              lambda node: tools.norm2(node.Coordinates-point))
 
 # tools -----------------------------------------------------------------------
 def matrixToList(num_mat):
@@ -62,15 +58,20 @@ def kDependentMatrixToVector(crystal, n_bands, matrix):
         index += n_bands*n_bands
     return vec
 
-def kDependentMatrixScalarProduct(k_grid, a1, a2):
+def kDependentMatrixGradientScalarProduct(k_grid, a1, a2):
+    # we can't use complex multiplication since our "complex" number
+    # here is just a convenient notation for a gradient, so the real
+    # and imaginary parts have to stay separate.
     sp = 0.
     for ii in k_grid.chopUpperBoundary():
-        sp += mtools.entrySum(num.multiply(a1[ii], num.conjugate(a2[ii])))
-    return sp
+        rp = num.asarray(num.multiply(a1[ii].real, a2[ii].real), num.Complex)
+        ip = num.asarray(num.multiply(a1[ii].imaginary, a2[ii].imaginary), num.Complex)
+        sp += mtools.entrySum(rp) + 1j*mtools.entrySum(ip)
+    return sp / tools.product(k_grid.gridIntervalCounts())
 
 def operateOnKDependentMatrix(k_grid, a, m_op):
     result = {}
-    for ii in k_grid:
+    for ii in k_grid.chopUpperBoundary():
         result[ii] = m_op(a[ii])
     return result
 
@@ -79,6 +80,74 @@ def operateOnKDependentMatrices(k_grid, a1, a2, m_op):
     for ii in k_grid:
         result[ii] = m_op(a1[ii], a2[ii])
     return result
+
+def frobeniusNormOnKDependentMatrices(k_grid, mat):
+    result = 0
+    for ii in k_grid:
+        result += mtools.frobeniusNorm(mat[ii])
+    return result
+
+class tSimpleArg:
+    def __init__(self):
+        pass
+
+    def reset(self):
+        pass
+
+    def copy(self):
+        return self
+
+    def __call__(self, z, association = None):
+        return cmath.log(z).imag
+
+class tStatsCountingArg:
+    def __init__(self):
+        self.Violations = 0
+        self.Applications = 0
+
+    def reset(self):
+        if self.Applications:
+            print "violations in past term %d out of %d (%f%%)" % \
+                  (self.Violations, self.Applications, 
+                   100. * self.Violations / self.Applications)
+        self.Applications = 0
+        self.Violations = 0
+
+    def copy(self):
+        return self
+
+    def __call__(self, z, association = None):
+        result = cmath.log(z).imag
+        self.Applications += 1
+        if abs(result/math.pi) > 0.5:
+            self.Violations += 1
+        return result
+
+class tBoinkArg:
+    def __init__(self, last_value_dict = {}):
+        self.LastValue = last_value_dict.copy()
+
+    def reset(self):
+        self.LastValue = {}
+
+    def copy(self):
+        return tBoinkArg(self.LastValue)
+
+    def __call__(self, z, association = None):
+        result = cmath.log(z).imag
+
+        use_randadd = abs(result/math.pi) > 0.5
+        have_randadd = association in self.LastValue
+        #assert not (not use_randadd and have_randadd)
+        if use_randadd:
+            if have_randadd:
+                randadd = self.LastValue[association]
+            else:
+                randadd = random.randint(-1,1) * 2 * math.pi
+                self.LastValue[association] = randadd
+            return result + randadd
+        else:
+            return result
 
 class tContinuityAwareArg:
     def __init__(self, last_value_dict = {}):
@@ -107,7 +176,6 @@ class tContinuityAwareArg:
             result = cmath.log(z).imag
             self.LastValue[association] = result
             return result
-
 
 # K space weights -------------------------------------------------------------
 class tKSpaceDirectionalWeights:
@@ -216,6 +284,7 @@ class tMarzariSpreadMinimizer:
         return total_spread_f
 
     def badWannierCenters(self, n_bands, scalar_products):
+        # without the series-changing corrections by Marzari
         wannier_centers = []
         for n in range(n_bands):
             result = num.zeros((2,), num.Complex)
@@ -229,6 +298,7 @@ class tMarzariSpreadMinimizer:
         return wannier_centers
 
     def badSpreadFunctional(self, n_bands, scalar_products):
+        # without the series-changing corrections by Marzari
         wannier_centers = self.badWannierCenters(n_bands, scalar_products)
 
         total_spread_f = 0
@@ -312,7 +382,7 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r_tilde2[i,j] = m[i,j] / m[j,j]
-                    assert mtools.frobeniusNorm(r_tilde-r_tilde2) < 1e-15
+                    assert mtools.frobeniusNorm(r_tilde-r_tilde2) < 1e-13
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
@@ -352,6 +422,7 @@ class tMarzariSpreadMinimizer:
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
+                    #print "mein_q", ii, kgii, n, arg(m_diagonal[n], (ii, kgii, n)) / math.pi
                     q[n] = arg(m_diagonal[n], (ii, kgii, n))
 
                 for n in range(n_bands):
@@ -392,8 +463,7 @@ class tMarzariSpreadMinimizer:
             assert mtools.isSkewHermitian(dW)
             exp_dW = mtools.matrixExpByDiagonalization(dW)
             assert mtools.isUnitary(exp_dW)
-
-            temp_mix_matrix[ii] = mm(prev_mix_matrix[ii], exp_dW)
+            temp_mix_matrix[ii] = mm(exp_dW, prev_mix_matrix[ii])
         return temp_mix_matrix
 
     def testSPUpdater(self, pbands, mix_matrix):
@@ -427,12 +497,17 @@ class tMarzariSpreadMinimizer:
         job.done()
 
         oi = self.omegaI(len(pbands), orig_sps)
-        arg = tContinuityAwareArg()
+        arg = tStatsCountingArg()
+        #arg = tContinuityAwareArg()
+        #arg = tBoinkArg()
 
-        observer = iteration.makeObserver(stall_thresh = 1e-5, max_stalls = 3)
+        ask_about_plots = raw_input("ask about plots? (y/n) [n]") == "y"
+
+        observer = iteration.makeObserver(stall_thresh = 1e-4, max_stalls = 3)
         observer.reset()
         try:
             while True:
+                arg.reset()
                 sps = self.updateOffsetScalarProducts(orig_sps, mix_matrix)
                 assert abs(oi - self.omegaI(len(pbands), sps)) < 1e-5
                 od, ood = self.omegaD(len(pbands), sps, arg), \
@@ -461,16 +536,18 @@ class tMarzariSpreadMinimizer:
                             new_m = temp_sps[ii,kgii]
                             m = sps[ii,kgii]
                             dw = x * gradient[ii]
-                            dm1 = new_m - m
-                            dm2 = mm(dw, m) + mm(m, num.hermite(dw))
+                            if added_tup in gradient:
+                                dw_plusb = x * gradient[added_tup]
+                                dm1 = new_m - m
+                                dm2 = mm(dw, m) + mm(m, num.hermite(dw_plusb))
 
-                            if print_count:
-                                print ii, kgii
-                                print "dw", mtools.frobeniusNorm(dw)
-                                print "dm1", mtools.frobeniusNorm(dm1)
-                                print "dm2", mtools.frobeniusNorm(dm2)
-                                print "dm2-dm1", mtools.frobeniusNorm(dm2-dm1)
-                                print_count -= 1
+                                if print_count:
+                                    print ii, kgii
+                                    print "dw", mtools.frobeniusNorm(dw)
+                                    print "dm1", mtools.frobeniusNorm(dm1)
+                                    print "dm2", mtools.frobeniusNorm(dm2)
+                                    print "dm2-dm1", mtools.frobeniusNorm(dm2-dm1)
+                                    print_count -= 1
 
                 #testDerivs(1e-4)
                 #testDerivs(1e-3)
@@ -487,15 +564,20 @@ class tMarzariSpreadMinimizer:
                     return result
 
                 def plotfunc(x):
+                    okm = lambda a1, a2, m_op: operateOnKDependentMatrices(
+                        self.Crystal.KGrid.chopUpperBoundary(), a1, a2, m_op)
+                    frobk = lambda a: frobeniusNormOnKDependentMatrices(
+                        self.Crystal.KGrid.chopUpperBoundary(), a)
+
                     temp_mix_matrix = self.getMixMatrix(mix_matrix, x, gradient)
                     temp_sps = self.updateOffsetScalarProducts(orig_sps, temp_mix_matrix)
 
-                    new_grad = self.spreadFunctionalGradient(len(pbands), temp_sps, arg)
                     new_grad_od = self.spreadFunctionalGradientOmegaOD(len(pbands), temp_sps, arg)
                     new_grad_d = self.spreadFunctionalGradientOmegaD(len(pbands), temp_sps, arg)
-                    sp = kDependentMatrixScalarProduct(self.Crystal.KGrid, new_grad, gradient)
-                    sp_od = kDependentMatrixScalarProduct(self.Crystal.KGrid, new_grad_od, gradient)
-                    sp_d = kDependentMatrixScalarProduct(self.Crystal.KGrid, new_grad_d, gradient)
+                    new_grad = okm(new_grad_od, new_grad_d, operator.add)
+                    sp_od = kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, new_grad_od, gradient)
+                    sp_d = kDependentMatrixGradientScalarProduct(self.Crystal.KGrid, new_grad_d, gradient)
+                    sp = sp_od + sp_d
 
                     od = self.omegaD(len(pbands), temp_sps, arg)
                     ood = self.omegaOD(temp_sps)
@@ -503,9 +585,10 @@ class tMarzariSpreadMinimizer:
                            
                 xmin = scipy.optimize.brent(minfunc, brack = (0, 1e-1))
 
-                tools.write1DGnuplotGraphs(plotfunc, -3*xmin, 3 * xmin, 
-                                           steps = 200, progress = True)
-                raw_input("see plot:")
+                if ask_about_plots and raw_input("see plot? y/n [n]:") == "y":
+                    tools.write1DGnuplotGraphs(plotfunc, -5*xmin, 5 * xmin, 
+                                               steps = 100, progress = True)
+                    raw_input("see plot:")
 
                 mix_matrix = self.getMixMatrix(mix_matrix, xmin, gradient)
         except iteration.tIterationStalled:
@@ -520,7 +603,7 @@ def computeMixedBands(crystal, bands, mix_matrix):
     for n in range(len(bands)):
         band = {}
 
-        for ii in crystal.KGrid.chopUpperBoundary():
+        for ii in crystal.KGrid:
             # set eigenvalue to 0 since there is no meaning attached to it
             band[ii] = 0, tools.linearCombination(mix_matrix[ii][n],
                                                   [bands[i][ii][1] for i in range(len(bands))])
@@ -559,15 +642,15 @@ def computeWanniers(crystal, bands, wannier_grid):
                 return cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
 
             this_wf[wannier_index] = fempy.integration.integrateOnTwoDimensionalGrid(
-                crystal.KGrid, function_in_integral) * pvol / (2*math.pi) ** d
-        wannier_functions.append(this_wannier_function)
+                crystal.KGrid, function_in_integral) * (pvol / (2*math.pi) ** d)
+        wannier_functions.append(this_wf)
     job.done()
     return wannier_functions
 
 def integrateOverKGrid(crystal, f):
     integral = 0
-    for ii in crystal.KGrid.chopUpperBoundary():
-        integral += f(crystal.KGrid[ii])
+    for k_index in crystal.KGrid.chopUpperBoundary():
+        integral += f(crystal.KGrid[k_index])
     return integral / tools.product(crystal.KGrid.gridIntervalCounts())
 
 def averagePhaseDeviation(multicell_grid, func_on_multicell_grid):

@@ -585,7 +585,7 @@ def periodicizeBands(crystal, bands, exponent = -1):
         else:
             pband = {}
 
-        for ki in crystal.KGrid.enlargeAtLowerBoundaries():
+        for ki in crystal.KGrid.enlargeAtBothBoundaries():
             if crystal.HasInversionSymmetry and crystal.KGrid[ki][0] > 0:
                 continue
             pband[ki] = band[ki][0], \
@@ -598,7 +598,7 @@ def periodicizeBands(crystal, bands, exponent = -1):
                                                  crystal.KGrid[ki],
                                                  exponent)
 
-            assert tools.norm2((this_pband - pband[ki][1]).vector()) < 1e-15
+            assert tools.norm2((this_pband - pband[ki][1]).vector()) < 1e-10
         pbands.append(pband)
         
     return pbands
