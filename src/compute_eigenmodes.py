@@ -95,7 +95,7 @@ def computeFloquetBCs(periodicity_nodes, k):
 
 
 
-def unitCellDemo(mesh, epsilon, sigma, list_of_ks, lattice):
+def computeEigenmodes(mesh, epsilon, sigma, keys, ks_of_keys, lattice):
   periodicity_nodes = findPeriodicityNodes(mesh, lattice.DirectLatticeBasis)
 
   eigensolver = fempy.solver.tLaplacianEigenproblemSolver(mesh, 
@@ -103,21 +103,16 @@ def unitCellDemo(mesh, epsilon, sigma, list_of_ks, lattice):
                                                           typecode = num.Complex)
 
   results = eigenmodes.tEigenmodes(mesh)
-  for k in list_of_ks:
+  for key in keys:
+    k = ks_of_keys[key]
     print "computing for k =", k
     my_periodicity_nodes = computeFloquetBCs(periodicity_nodes, k)
     eigensolver.addPeriodicBoundaryConditions(my_periodicity_nodes)
 
     solution = eigensolver.solve(sigma)
-    results.addKValue(k, list(solution.RitzValues), list(solution.RitzVectors))
+    results.add(key, list(solution.RitzValues), list(solution.RitzVectors))
 
   return results
-
-  #band_diagram_file = file(",,band_diagram.data", "w")
-  #for index, (k, result) in tools.indexAnd(results):
-    #for val in result.RitzValues:
-      #band_diagram_file.write("%d\t%f\n" % (index, math.sqrt(val.real)))
-
 
 
 
@@ -152,21 +147,24 @@ def computeEigenmodesForStandardUnitCell(lattice, inner_radius):
   sigma = 0.9
   
   rl = lattice.ReciprocalLattice
-  #raw_ks = [0 * rl[0], 0.5 * rl[0], 0.5 * (rl[0]+rl[1]), 0 * rl[0]]
-  #all_ks = tools.interpolateVectorList(raw_ks, 20)
 
-  list_of_ks = tools.getGrid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
-                             [4] * len (lattice.ReciprocalLattice))
-  return unitCellDemo(mesh, epsilon, sigma, list_of_ks, lattice)
+  grid_of_ks  = tools.tGrid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
+                           [4] * len (lattice.ReciprocalLattice))
+  keys = ks_of_keys.asSequence().getAllIndices()
+
+  return grid_of_ks, computeEigenmodes(mesh, epsilon, sigma, 
+                                       keys = keys, 
+                                       ks_of_keys = grid_of_ks, 
+                                       lattice = lattice)
 
 
 
 def main():
   a = 1.
   my_lattice = lattice.tLattice([a*num.array([1,0], num.Float), a*num.array([0,1], num.Float)])
-  results = computeEigenmodesForStandardUnitCell(my_lattice, a*0.18)
+  grid_of_ks, my_eigenmodes = computeEigenmodesForStandardUnitCell(my_lattice, a*0.18)
   job = fempy.stopwatch.tJob("saving")
-  cPickle.dump((my_lattice, results), file(",,eigenmodes.pickle", "w"), cPickle.HIGHEST_PROTOCOL)
+  cPickle.dump((my_lattice, grid_of_ks, my_eigenmodes), file(",,eigenmodes.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
   job.done()
 
 main()
