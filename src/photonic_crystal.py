@@ -271,9 +271,6 @@ def findPeriodicityNodes(mesh, boundary, grid_vectors, order = 2):
                                       for icoeff, (other_node, alpha) 
                                       in zip(icoeffs, other_nodes_with_alpha)]
 
-                #print "DID SOMETHING!", ideal_point
-                #for other_node, icoeff in nodes_with_icoeffs:
-                    #print icoeff, other_node.Coordinates
                 periodicity_nodes[node] = (gv, nodes_with_icoeffs)
     job.done()
 
@@ -286,7 +283,7 @@ def getFloquetConstraints(periodicity_nodes, k):
     constraints = {}
     for dependent_node, (gv, independent_nodes) in periodicity_nodes.iteritems():
         lincomb_specifier = []
-        floquet_factor = cmath.exp(-1j * num.innerproduct(gv, k))
+        floquet_factor = cmath.exp(-1j*gv*k)
         for independent_node, factor in independent_nodes:
             lincomb_specifier.append((factor * floquet_factor, independent_node))
         constraints[dependent_node] = 0, lincomb_specifier

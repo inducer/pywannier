@@ -35,13 +35,13 @@ class tDictionaryOfMatrices(tools.tDictionaryOfArithmeticTypes):
     def hermite():
         result = tDictionaryOfMatrices()
         for key in self:
-            result[key] = num.hermite(self[key])
+            result[key] = self[key].H
         return result
         
     def transpose():
         result = tDictionaryOfMatrices()
         for key in self:
-            result[key] = num.transpose(self[key])
+            result[key] = self[key].T
         return result
         
     def _getreal():
@@ -61,6 +61,8 @@ class tDictionaryOfMatrices(tools.tDictionaryOfArithmeticTypes):
 
     real = property(_getreal)
     imaginary = property(_getimaginary)
+    T = property(transpose)
+    H = property(hermite)
 
 
 
@@ -120,10 +122,10 @@ def frobeniusNormOnKDependentMatrices(k_grid, mat):
     return result
 
 def symmetricPart(matrix):
-    return 0.5*(matrix+num.transpose(matrix))
+    return 0.5*(matrix+matrix.T)
 
 def skewSymmetricPart(matrix):
-    return 0.5*(matrix-num.transpose(matrix))
+    return 0.5*(matrix-matrix.T)
 
 class tSimpleArg:
     def __init__(self):
@@ -266,7 +268,6 @@ def minimizeByCG(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None):
     # from Shewchuk's paper, p. 48
     # Polak-Ribi`ere with implicit restart
 
-
     d = last_r = -grad(x)
     observer = iteration.makeObserver(min_change = 1e-5, max_unchanged = 3)
     observer.reset()
@@ -388,7 +389,7 @@ class tMarzariSpreadMinimizer:
 
                 red_tuple = self.Crystal.KGrid.reducePeriodically(added_tuple)
                 negated_kgii = tools.negateTuple(kgii)
-                scalar_products[red_tuple, negated_kgii] = num.hermite(mat)
+                scalar_products[red_tuple, negated_kgii] = mat.H
 
         self.checkScalarProducts(scalar_products)
         return scalar_products
@@ -420,8 +421,6 @@ class tMarzariSpreadMinimizer:
         return scalar_products
 
     def updateOffsetScalarProducts(self, scalar_products, mix_matrix):
-        mm = num.matrixmultiply
-
         new_scalar_products = {}
         for k_index in self.Crystal.KGrid:
             if self.DebugMode:
@@ -431,16 +430,13 @@ class tMarzariSpreadMinimizer:
                 added_tuple = self.Crystal.KGrid.reducePeriodically(
                     tools.addTuples(k_index, kgii))
 
-                mat = mm(
-                    mix_matrix[added_tuple], 
-                    mm(scalar_products[k_index, kgii], 
-                       num.hermite(mix_matrix[k_index])))
+                mat = mix_matrix[added_tuple] * scalar_products[k_index, kgii] * mix_matrix[k_index].H
 
                 new_scalar_products[k_index, kgii] = mat
 
                 red_tuple = self.Crystal.KGrid.reducePeriodically(added_tuple)
                 negated_kgii = tools.negateTuple(kgii)
-                new_scalar_products[red_tuple, negated_kgii] = num.hermite(mat)
+                new_scalar_products[red_tuple, negated_kgii] = mat.H
 
         self.checkScalarProducts(new_scalar_products)
         return new_scalar_products
@@ -516,7 +512,7 @@ class tMarzariSpreadMinimizer:
                         continue
 
                     result -= 1j* self.KWeights.KWeights[kgii_index] \
-                              * num.asarray(self.KWeights.KGridIncrements[kgii_index], num.Complex) \
+                              * self.KWeights.KGridIncrements[kgii_index] \
                               * (scalar_products[k_index, kgii][n,n] - 1)
             result /= self.Crystal.KGrid.gridPointCount()
             wannier_centers.append(result)
@@ -611,11 +607,11 @@ class tMarzariSpreadMinimizer:
                     assert mtools.frobeniusNorm(r-r2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-num.asarray(skewSymmetricPart(num.transpose(r.real)), num.Complex)
-                           +1j*num.asarray(symmetricPart(r.imaginary), num.Complex))
+                          (-skewSymmetricPart(r.real.T)
+                           +1j*symmetricPart(r.imaginary))
 
                 # Omega_D part
-                r_tilde = num.divide(num.hermite(m), num.conjugate(m_diagonal))
+                r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
 
                 if self.DebugMode:
                     r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
@@ -640,8 +636,8 @@ class tMarzariSpreadMinimizer:
                     assert mtools.frobeniusNorm(t-t2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-num.asarray(skewSymmetricPart(num.transpose(t.imaginary)), num.Complex)
-                           -1j*num.asarray(symmetricPart(t.real), num.Complex))
+                          (-skewSymmetricPart(t.imaginary.T)
+                           -1j*symmetricPart(t.real))
 
             gradient[k_index] = result
         return gradient
@@ -662,7 +658,7 @@ class tMarzariSpreadMinimizer:
                 m_diagonal = num.diagonal(m)
 
                 # Omega_OD part
-                r = num.multiply(num.hermite(m), m_diagonal)
+                r = num.multiply(m.H, m_diagonal)
 
                 if self.DebugMode:
                     r2 = num.zeros((n_bands, n_bands), num.Complex)
@@ -672,7 +668,7 @@ class tMarzariSpreadMinimizer:
                     assert mtools.frobeniusNorm(r-r2) < 1e-15
 
                 result += -2. * self.KWeights.KWeights[kgii_index] * \
-                          (r-num.hermite(r))
+                          (r-r.H)
             gradient[k_index] = result
         return gradient
         ### WRONG!!! DELETE ME!
@@ -692,7 +688,7 @@ class tMarzariSpreadMinimizer:
                 m_diagonal = num.diagonal(m)
 
                 # Omega_OD part
-                r = num.multiply(num.hermite(m), m_diagonal)
+                r = num.multiply(m.H, m_diagonal)
 
                 if self.DebugMode:
                     r2 = num.zeros((n_bands, n_bands), num.Complex)
@@ -702,8 +698,8 @@ class tMarzariSpreadMinimizer:
                     assert mtools.frobeniusNorm(r-r2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-num.asarray(skewSymmetricPart(num.transpose(r.real)), num.Complex)
-                           +1j*num.asarray(symmetricPart(r.imaginary), num.Complex))
+                          (-skewSymmetricPart(r.real.T)
+                           +1j*symmetricPart(r.imaginary))
             gradient[k_index] = result
         return gradient
 
@@ -722,7 +718,7 @@ class tMarzariSpreadMinimizer:
                 m_diagonal = num.diagonal(m)
 
                 # Omega_D part
-                r_tilde = num.divide(num.hermite(m), num.conjugate(m_diagonal))
+                r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
 
                 if self.DebugMode:
                     r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
@@ -747,8 +743,8 @@ class tMarzariSpreadMinimizer:
                     assert mtools.frobeniusNorm(t-t2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-num.asarray(skewSymmetricPart(num.transpose(t.imaginary)), num.Complex)
-                           -1j*num.asarray(symmetricPart(t.real), num.Complex))
+                          (-skewSymmetricPart(t.imaginary.T)
+                           -1j*symmetricPart(t.real))
 
             gradient[k_index] = result
         return gradient
@@ -769,7 +765,7 @@ class tMarzariSpreadMinimizer:
                 m_diagonal = num.diagonal(m)
 
                 # Omega_D part
-                r_tilde = num.divide(num.hermite(m), num.conjugate(m_diagonal))
+                r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
 
                 if self.DebugMode:
                     r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
@@ -794,14 +790,12 @@ class tMarzariSpreadMinimizer:
                     assert mtools.frobeniusNorm(t-t2) < 1e-15
 
                 result += -2. * self.KWeights.KWeights[kgii_index] * \
-                          (t+num.hermite(t))
+                          (t+t.H)
             gradient[k_index] = result
         return gradient
         ### WRONG!!! DELETE ME!
 
     def getMixMatrix(self, prev_mix_matrix, factor, gradient):
-        mm = num.matrixmultiply
-
         temp_mix_matrix = {}
         for k_index in self.Crystal.KGrid:
             dW = factor * gradient[k_index]
@@ -812,7 +806,7 @@ class tMarzariSpreadMinimizer:
             if self.DebugMode:
                 assert mtools.unitarietyError(exp_dW) < 1e-13
 
-            temp_mix_matrix[k_index] = mm(exp_dW, prev_mix_matrix[k_index])
+            temp_mix_matrix[k_index] = exp_dW * prev_mix_matrix[k_index]
 
         return temp_mix_matrix
 
@@ -842,7 +836,6 @@ class tMarzariSpreadMinimizer:
         """scalar_products are understood to be before application of the
         mix_matrix specified.
         """
-        mm = num.matrixmultiply
         sps = self.updateOffsetScalarProducts(raw_scalar_products, mix_matrix)
 
         if self.DebugMode:
@@ -860,7 +853,7 @@ class tMarzariSpreadMinimizer:
         job.done()
 
         for k_index in self.Crystal.KGrid:
-            new_mix_matrix[k_index] = mm(num.hermite(q), mix_matrix[k_index])
+            new_mix_matrix[k_index] = q.H * mix_matrix[k_index]
 
         if self.DebugMode:
             sps_post = self.updateOffsetScalarProducts(raw_scalar_products, new_mix_matrix)
@@ -868,7 +861,6 @@ class tMarzariSpreadMinimizer:
         return new_mix_matrix
 
     def minimizeSpread(self, pbands, mix_matrix):
-        mm = num.matrixmultiply
         if self.DebugMode:
             for ii in self.Crystal.KGrid:
                 assert mtools.unitarietyError(mix_matrix[ii]) < 5e-3
@@ -941,9 +933,9 @@ class tMarzariSpreadMinimizer:
                             dw = x * gradient[k_index]
 
                             dw_plusb = x * gradient[added_tup]
-                            m_plusb = num.hermite(m)
+                            m_plusb = m.H
                             dm1 = new_m - m
-                            dm2 = mm(dw_plusb, m) + mm(m, num.hermite(dw))
+                            dm2 = dw_plusb*m + m*dw.H
 
                             before_oiod_here = w_b * (len(pbands)-tools.norm2squared(m_diagonal))
                             after_oiod_here = w_b * (len(pbands)-tools.norm2squared(new_m_diagonal))
@@ -958,8 +950,8 @@ class tMarzariSpreadMinimizer:
                             doiod_here2c = 2 * w_b * sum(num.multiply(-new_m_diagonal+m_diagonal,
                                                                       num.conjugate(m_diagonal))).real
 
-                            r = num.multiply(num.hermite(m), m_diagonal)
-                            doiod_here3 = -4*w_b*num.trace(mm(dw, r)).real
+                            r = num.multiply(m.H, m_diagonal)
+                            doiod_here3 = -4*w_b*num.trace((dw*r).real)
                             doiod3 += doiod_here3
 
                             half_doiod_here3 = -2*w_b*num.trace(mm(dw, r)).real
@@ -969,15 +961,15 @@ class tMarzariSpreadMinimizer:
                                 m_diagonal).real
                             doiod4 += doiod_here4
 
-                            half_a_doiod_here5 = -2*w_b*sum(num.multiply(num.diagonal(mm(dw_plusb, num.hermite(m_plusb))),
+                            half_a_doiod_here5 = -2*w_b*sum(num.multiply(num.diagonal(dw_plusb*m_plusb.H),
                                                                          num.conjugate(m_diagonal))).real
-                            half_b_doiod_here5 = -2*w_b*sum(num.multiply(num.diagonal(num.conjugate(mm(dw, num.hermite(m)))),
+                            half_b_doiod_here5 = -2*w_b*sum(num.multiply(num.diagonal(num.conjugate(dw* m.H)),
                                                                          num.diagonal(num.conjugate(m)))).real
                             doiod_here5 = half_a_doiod_here5 + half_b_doiod_here5
                             doiod5 += doiod_here5
                             assert abs(doiod_here4-doiod_here5) < 1e-11
 
-                            ssym_re_r_t = skewSymmetricPart(num.transpose(r.real))
+                            ssym_re_r_t = skewSymmetricPart(r.real.T)
                             sym_im_r = symmetricPart(r.imaginary)
                             re_grad_od = 4 * w_b * (-ssym_re_r_t )
                             im_grad_od = 4 * w_b * sym_im_r
@@ -1061,7 +1053,6 @@ class tMarzariSpreadMinimizer:
         return mix_matrix
 
     def minimizeSpread2(self, pbands, mix_matrix):
-        mm = num.matrixmultiply
         if self.DebugMode:
             for ii in self.Crystal.KGrid:
                 assert mtools.unitarietyError(mix_matrix[ii]) < 5e-3
@@ -1184,7 +1175,7 @@ def generateRandomGaussians(crystal, typecode):
             
         # FIXME this is dependent on dlb actually being unit vectors
         def gaussian(point):
-            arg = num.matrixmultiply(sigma_inv, point - center)
+            arg = sigma_inv*(point - center)
             return math.exp(-mtools.norm2squared(arg))
 
         yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 

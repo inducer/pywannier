@@ -29,6 +29,7 @@ job.done()
 
 for crystal in crystals:
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
+                                                crystal.BoundaryShapeSection,
                                                 crystal.Lattice.DirectLatticeBasis)
 
     job = fempy.stopwatch.tJob("checking")

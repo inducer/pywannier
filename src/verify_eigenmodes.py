@@ -21,6 +21,7 @@ import photonic_crystal as pc
 
 def verifyEigenmodes(crystal, spc):
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
+                                                crystal.BoundaryShapeSection,
                                                 crystal.Lattice.DirectLatticeBasis)
 
     eigensolver = fempy.solver.tLaplacianEigenproblemSolver(crystal.Mesh, 
@@ -43,7 +44,6 @@ def run():
     job.done()
 
     for crystal in crystals:
-        print crystal
         spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
                                                           crystal.MassMatrix)
         verifyEigenmodes(crystal, spc)

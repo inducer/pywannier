@@ -71,11 +71,11 @@ class t2DProblem:
     def __init__(self):
         self.Lattice = pc.tBravaisLattice([num.array([1,0]), num.array([0, 1])])
         epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(1, 0.18, 1.)) # 11.56
-        self.Mesh = pc.generateSquareMeshWithRodCenter(self.Lattice, 
-                                                       inner_radius = 0.18,
-                                                       coarsening_factor = 4)
+        self.Mesh, boundary = pc.generateSquareMeshWithRodCenter(
+            self.Lattice, inner_radius = 0.18, coarsening_factor = 4)
 
         self.PeriodicityNodes = pc.findPeriodicityNodes(self.Mesh, 
+                                                        boundary,
                                                         self.Lattice.DirectLatticeBasis)
         self.EigenSolver = fempy.solver.tLaplacianEigenproblemSolver(
             self.Mesh, constrained_nodes = self.PeriodicityNodes,
@@ -99,7 +99,7 @@ class t2DProblem:
         pairs.sort(lambda (e1, m1), (e2, m2): cmp(abs(e1), abs(e2)))
         return [evalue for evalue, em in pairs]
 
-problem = t1DProblem()
+problem = t2DProblem()
 k_track = tools.interpolateVectorList(problem.kTrack(), 49)
 
 def scale_eigenvalue(ev):
