@@ -105,7 +105,7 @@ k_weights = [1/(2. * mtools.norm2squared(kgi))
 scalar_products = {}
 
 job = fempy.stopwatch.tJob("computing scalar products")
-for ii in crystal.KGrid.innerIndices():
+for ii in crystal.KGrid.chopBothBoundaries():
     for kgii_index, kgii in enumerate(k_grid_index_increments):
         other_index = addTuple(ii, kgii)
         mat = num.zeros((n_bands, n_bands), num.Complex)
@@ -121,7 +121,7 @@ job.done()
 # Bogus because
 # - N was left out
 omega_i_34 = 0.
-for ii in crystal.KGrid.innerIndices():
+for ii in crystal.KGrid.chopBothBoundaries():
     for kgii_index, kgii in enumerate(k_grid_index_increments):
         my_sum = 0
         for i in range(n_bands):
@@ -138,7 +138,7 @@ print omega_i_34
 
 def computeRSquaredEV(band_index):
     result = 0.
-    for ii in crystal.KGrid.innerIndices():
+    for ii in crystal.KGrid.chopBothBoundaries():
         for kgii_index, kgii in enumerate(k_grid_index_increments):
             my_m = scalar_products[ii, kgii][band_index, band_index]
             result += k_weights[kgii_index] * \
@@ -148,7 +148,7 @@ def computeRSquaredEV(band_index):
 def computeWeirdScalarProduct(k, r, m, n):
     sp = tools.sp
     result = num.zeros((2,), num.Complex)
-    for ii in crystal.KGrid.innerIndices():
+    for ii in crystal.KGrid.chopBothBoundaries():
         k = crystal.KGrid[ii]
         for kgii_index, kgii in enumerate(k_grid_index_increments):
             result += k_weights[kgii_index] * cmath.exp(1j * sp(k, r)) \

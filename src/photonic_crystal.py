@@ -238,6 +238,10 @@ def findBands(crystal):
         else:
             band = {}
 
+        band = tools.tDependentDictionary(
+            lambda dic, key: dic[k_grid.reducePeriodically(key)],
+            band)
+
         first = True
 
         for i,j in k_grid:
@@ -298,7 +302,7 @@ def visualizeBandsGnuplot(filename, crystal, bands):
         out_file.write("%f\t%f\t%f\n" % (spot[0], spot[1], scale_eigenvalue(band[key][0])))
 
     for band in bands:
-        for i,j in k_grid.gridBlockIndices():
+        for i,j in k_grid.chopUpperBoundary():
             writePoint((i,j))
             writePoint((i+1,j))
             writePoint((i+1,j+1))
@@ -330,7 +334,7 @@ def visualizeBandsVTK(filename, crystal, bands):
         for k_index in k_grid:
             makeNode(k_index)
 
-        for i,j in k_grid.gridBlockIndices():
+        for i,j in k_grid.chopUpperBoundary():
             quads.append((
                 node_lookup[i,j],
                 node_lookup[i+1,j],

@@ -6,6 +6,8 @@ import pylinear.matrices as num
 import pylinear.linear_algebra as la
 import pylinear.matrix_tools as mtools
 
+import Numeric
+
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
 import fempy.stopwatch
@@ -46,19 +48,44 @@ job = fempy.stopwatch.tJob("localizing bands")
 bands = pc.findBands(crystal)
 job.done()
 
+# tools -----------------------------------------------------------------------
 def addTuple(t1, t2):
     return tuple([t1v + t2v for t1v, t2v in zip(t1, t2)])
 
-# bands to use in computation
-n_bands = 6 #len(bands)
+def matrixToList(num_mat):
+    if len(num_mat.shape) == 1:
+        return [x for x in num_mat]
+    else:
+        return [matrixToList(x) for x in num_mat]
+
+def vectorToKDependentMatrix(vec):
+    matrix = {}
+    index = 0
+    for ii in crystal.KGrid.chopUpperBoundary():
+        subvec = vec[index:index+n_bands*n_bands]
+        matrix[ii] = num.array(Numeric.reshape(subvec, (n_bands, n_bands)))
+        index += n_bands*n_bands
+    return matrix
+
+def kDependentMatrixToVector(matrix):
+    vec = Numeric.zeros((N * n_bands * n_bands,), Numeric.Complex)
+    index = 0
+    for ii in crystal.KGrid.chopUpperBoundary():
+        subvec = Numeric.reshape(Numeric.array(matrixToList(matrix[ii])), 
+                                 (n_bands*n_bands,))
+        vec[index:index+n_bands*n_bands] = subvec
+        index += n_bands*n_bands
+    return vec
+
+# K space weights -------------------------------------------------------------
 dimensions = 2
 
 k_grid_index_increments = []
 for i in range(dimensions):
-    direction = [0.] * dimensions
+    direction = [0] * dimensions
     direction[i] = 1
     k_grid_index_increments.append(tuple(direction))
-    direction = [0.] * dimensions
+    direction = [0] * dimensions
     direction[i] = -1
     k_grid_index_increments.append(tuple(direction))
 
@@ -67,8 +94,9 @@ k_grid_increments = [crystal.KGrid[kgii] - crystal.KGrid[0,0]
 
 k_weights = [0.5 / mtools.norm2squared(kgi)
              for kgi in k_grid_increments]
+k_weight_sum = sum(k_weights)
 
-# verify k_weights
+# verify...
 for i in range(dimensions):
     for j in range(dimensions):
         my_sum = 0
@@ -76,90 +104,158 @@ for i in range(dimensions):
             my_sum += k_weights[kgi_index]*kgi[i]*kgi[j]
         assert my_sum == tools.delta(i, j)
 
-# corresponds to M in Marzari's paper.
-# indexed by k_index and an index into k_grid_index_increments
-scalar_products = {}
+# Marzari-relevant functionality ----------------------------------------------
+n_bands = 6 # 2 .. len(bands), 1 does not work (FIXME?)
+N = tools.product(crystal.KGrid.gridIntervalCounts())
 
-job = fempy.stopwatch.tJob("computing scalar products")
-for ii in crystal.KGrid.innerIndices():
-    for kgii_index, kgii in enumerate(k_grid_index_increments):
-        other_index = addTuple(ii, kgii)
-        mat = num.zeros((n_bands, n_bands), num.Complex)
-        for i in range(n_bands):
-            for j in range(n_bands):
-                ev_i, em_i = bands[i][ii]
-                ev_j, em_j = bands[j][other_index]
-                mat[i,j] = sp(em_i, em_j)
-        scalar_products[ii, kgii] = mat
-job.done()
+def computeOffsetScalarProducts(crystal, bands):
+    scalar_products = {}
+    for ii in crystal.KGrid.chopUpperBoundary():
+        for kgii_index, kgii in enumerate(k_grid_index_increments):
+            other_index = addTuple(ii, kgii)
+            mat = num.zeros((n_bands, n_bands), num.Complex)
+            for i in range(n_bands):
+                for j in range(n_bands):
+                    ev_i, em_i = bands[i][ii]
+                    ev_j, em_j = bands[j][other_index]
+                    mat[i,j] = sp(em_i, em_j)
+            scalar_products[ii, kgii] = mat
+    return scalar_products
 
-# minimization algorithm ------------------------------------
-# FIXME -> gridBlockIndices, wraparound
-gradient = {}
-N = len(list(crystal.KGrid.innerIndices()))
+def updateOffsetScalarProducts(scalar_products, mix_matrix):
+    mm = num.matrixmultiply
 
-k_weight_sum = sum(k_weights)
-alpha = 1
-
-mix_matrix = tools.tDictionaryWithDefault(lambda x: num.identity(n_bands, num.Complex))
-mm = num.matrixmultiply
-iteration = 0
-
-while True:
-    print "--------------------------------------------------"
-    print "ITERATION %d" % iteration
-    print "--------------------------------------------------"
-    gradient_norm = 0.
-    job = fempy.stopwatch.tJob("updating scalar products")
     current_scalar_products = {}
-    for ii in crystal.KGrid.innerIndices():
+    for ii in crystal.KGrid.chopUpperBoundary():
         for kgii in k_grid_index_increments:
             current_scalar_products[ii, kgii] = mm(
-                num.hermite(mix_matrix[ii, kgii]), mm(scalar_products[ii, kgii], 
-                                         mix_matrix[ii, kgii]))
-    job.done()
+                mix_matrix[ii], 
+                mm(scalar_products[ii, kgii], 
+                   num.hermite(mix_matrix[addTuple(ii, kgii)])))
+    return current_scalar_products
 
-    job = fempy.stopwatch.tJob("computing wannier centers")
+def wannierCenters(scalar_products):
     wannier_centers = []
     for n in range(n_bands):
-        result = num.zeros((2,), num.Complex)
-        for ii in crystal.KGrid.innerIndices():
+        result = num.zeros((2,), num.Float)
+        for ii in crystal.KGrid.chopUpperBoundary():
             for kgii_index, kgii in enumerate(k_grid_index_increments):
                 result -= k_weights[kgii_index] \
-                          * num.asarray(k_grid_increments[kgii_index], num.Complex) \
+                          * k_grid_increments[kgii_index] \
                           * cmath.log(scalar_products[ii, kgii][n,n]).imag
         result /= N
-        print n, result
         wannier_centers.append(result)
-    job.done()
+    return wannier_centers
 
-    job = fempy.stopwatch.tJob("computing gradient")
-    for ii in crystal.KGrid.innerIndices():
+def spreadFunctional(scalar_products):
+    wannier_centers = wannierCenters(scalar_products)
+
+    total_spread_f = 0
+    for n in range(n_bands):
+        mean_r_squared = 0
+        for ii in crystal.KGrid.chopUpperBoundary():
+            for kgii_index, kgii in enumerate(k_grid_index_increments):
+                mean_r_squared += k_weights[kgii_index] \
+                          * (1 - abs(scalar_products[ii, kgii][n,n])**2 
+                             + cmath.log(scalar_products[ii, kgii][n,n]).imag**2)
+        mean_r_squared /= N
+        total_spread_f += mean_r_squared - mtools.norm2squared(wannier_centers[n])
+    return total_spread_f
+
+def omegaI(scalar_products):
+    omega_i = 0
+    for ii in crystal.KGrid.chopUpperBoundary():
+        for kgii_index, kgii in enumerate(k_grid_index_increments):
+            omega_i += k_weights[kgii_index] \
+                       * (n_bands - mtools.frobeniusNormSquared(scalar_products[ii, kgii]))
+    return omega_i / N
+
+def omegaOD(scalar_products):
+    def frobeniusNormOffDiagonalSquared(a):
+        result = 0
+        for i,j in a.indices():
+            if i != j:
+                result += abs(a[i,j])**2
+        return result
+
+    omega_od = 0
+    for ii in crystal.KGrid.chopUpperBoundary():
+        for kgii_index, kgii in enumerate(k_grid_index_increments):
+            omega_od += k_weights[kgii_index] \
+                       * (frobeniusNormOffDiagonalSquared(scalar_products[ii, kgii]))
+    return omega_od / N
+
+def omegaD(scalar_products, wannier_centers = None):
+    if wannier_centers is None:
+        wannier_centers = wannierCenters(scalar_products)
+
+    omega_d = 0.
+    for ii in crystal.KGrid.chopUpperBoundary():
+        for kgii_index, kgii in enumerate(k_grid_index_increments):
+            b = k_grid_increments[kgii_index]
+            for n in range(n_bands):
+                imln = cmath.log(scalar_products[ii, kgii][n,n]).imag
+                omega_d += k_weights[kgii_index] * \
+                        (imln + mtools.sp(wannier_centers[n], b))**2
+    return omega_d / N
+
+def spreadFunctional2(scalar_products, wannier_centers = None):
+    return omegaI(scalar_products) + \
+           omegaOD(scalar_products) + \
+           omegaD(scalar_products, wannier_centers)
+
+def spreadFunctionalGradient(scalar_products):
+    mm = num.matrixmultiply
+
+    gradient = {}
+    for ii in crystal.KGrid.chopUpperBoundary():
         k = crystal.KGrid[ii]
         result = num.zeros((n_bands, n_bands), num.Complex)
         for kgii_index, kgii in enumerate(k_grid_index_increments):
             m = current_scalar_products[ii, kgii]
             m_diagonal = num.diagonal(m)
-            r = num.transpose(num.multiply(num.transpose(m), m_diagonal))
+            r = num.multiply(m, m_diagonal)
             r_tilde = num.divide(m, m_diagonal)
             
             q = num.asarray(num.log(m_diagonal).imaginary, num.Complex)
             for n in range(n_bands):
                 q[n] += mtools.sp(k_grid_increments[kgii_index], wannier_centers[n])
-            t = num.transpose(num.multiply(num.transpose(r_tilde), q))
+            t = num.multiply(r_tilde, q)
 
-            a_r = (r-num.hermite(r))/2
-            s_t = (t+num.hermite(t))/2j
+            a_r = num.transpose(r-num.hermite(r))/2
+            s_t = num.transpose(t+num.hermite(t))/2j
 
-            result += 4 * k_weights[kgii_index] * (a_r + s_t)
-        gradient = result
+            result -= 4. * k_weights[kgii_index] * (a_r - s_t)
+        gradient[ii] = result
+    return gradient
+
+def run():
+    alpha = 0.5
+    iteration = 0
+
+    mix_matrix = {}
+    for ii in crystal.KGrid.chopUpperBoundary():
+        mix_matrix[ii] = num.identity(n_bands, num.Complex)
+
+    sps = computeOffsetScalarProducts(crystal, bands)
+    print "sf1", spreadFunctional(sps)
+    print "sf2", spreadFunctional2(sps)
+
+    sys.exit()
+
+    while True:
+        print "--------------------------------------------------"
+        print "ITERATION %d" % iteration
+        print "--------------------------------------------------"
+        gradient_norm = 0.
+        
         gradient_norm += mtools.frobeniusNorm(gradient)
         dW = alpha / (k_weight_sum * 4) * gradient
         exp_dW = mtools.matrixExpByDiagonalization(dW)
 
-        for kgii_index, kgii in enumerate(k_grid_index_increments):
-            mix_matrix[ii, kgii] = mm(mix_matrix[ii, kgii], exp_dW)
-    job.done()
+        mix_matrix[ii] = mm(mix_matrix[ii], exp_dW)
 
-    print gradient_norm
-    iteration += 1
+        print gradient_norm
+        iteration += 1
+
+run()
