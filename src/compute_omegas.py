@@ -170,4 +170,3 @@ for n in range(n_bands):
 
 print omega_i_naive
 
-

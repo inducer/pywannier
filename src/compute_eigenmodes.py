@@ -55,9 +55,9 @@ def computeEigenmodesForStandardUnitCell(lattice, epsilon, inner_radius,
     
         dist_center = math.sqrt( bary_x**2 + bary_y**2 )
         if dist_center < inner_radius * 1.2:
-            return area >= 2e-3 * 4
+            return area >= 2e-3 #* 4
         else:
-            return area >= 1e-2 * 4
+            return area >= 1e-2 #* 4
 
     job = fempy.stopwatch.tJob("geometry")
     mesh = fempy.mesh.tTwoDimensionalMesh(
@@ -123,7 +123,7 @@ def main():
                                                     epsilon,
                                                     a*inner_radius,
                                                     refine_steps = 0, # 4
-                                                    k_grid_points = 4)
+                                                    k_grid_points = 8)
     job = fempy.stopwatch.tJob("saving")
     cPickle.dump(crystals, file(",,crystal.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
     job.done()
