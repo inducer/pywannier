@@ -19,4 +19,4 @@ job = fempy.stopwatch.tJob("localizing bands")
 bands = pc.findBands(crystal)
 job.done()
 
-pc.visualizeBandsVTK(",,bands.vtk", crystal, bands[0:3])
+pc.visualizeBandsVTK(",,bands.vtk", crystal, bands[0:8])
