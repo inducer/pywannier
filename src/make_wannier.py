@@ -1,5 +1,4 @@
-import math, sys
-import cmath
+import math, cmath, sys, operator
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
@@ -33,6 +32,16 @@ job.done()
 
 crystal = crystals[0]
 
+sp = fempy.mesh_function.tScalarProductCalculator(crystal.ScalarProduct)
+job = fempy.stopwatch.tJob("normalizing modes")
+for key in crystal.KGrid:
+    norms = []
+    for index, (evalue, emode) in enumerate(crystal.Modes[key]):
+        norm_squared = sp(emode, emode)
+        assert abs(norm_squared.imag) < 1e-10
+        emode *= 1 / math.sqrt(norm_squared.real)
+job.done()
+
 job = fempy.stopwatch.tJob("localizing bands")
 bands = pc.findBands(crystal)
 job.done()
@@ -40,33 +49,6 @@ job.done()
 multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,
                                    limits = [(-2,2)] * 2)
-
-dlb = crystal.Lattice.DirectLatticeBasis
-for band_index, band in enumerate(bands):
-    for k_index in crystal.KGrid:
-        k = crystal.KGrid[k_index]
-        print "band = ", band_index, "k =",k
-        
-        offsets_and_mesh_functions = []
-        for multicell_index in multicell_grid:
-            R = multicell_grid[multicell_index]
-
-            my_mode = cmath.exp(1.j * mtools.sp(k,R)) * band[k_index][1]
-            offsets_and_mesh_functions.append((R, my_mode.real))
-        visualization.visualizeSeveralMeshes("vtk", 
-                                             (",,result.vtk", ",,result_grid.vtk"), 
-                                             offsets_and_mesh_functions)
-        value = raw_input("[b<enter> for next band, enter for next k in band]:")
-        if value == "b":
-            break
-
-sys.exit(0)
-
-multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
-                                   grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                   limits = [(-2,2)] * 2)
-
-
 
 job = fempy.stopwatch.tJob("computing wannier functions")
 wannier_functions = []
@@ -87,15 +69,43 @@ for n, band in enumerate(bands):
     wannier_functions.append(this_wannier_function)
 job.done()
 
-for n, band in enumerate(bands):
-    omv = []
-    for multicell_index in multicell_grid:
-        R = multicell_grid[multicell_index]
-        omv.append((R, crystal.Mesh, wannier_functions[n][multicell_index].real))
+if False:
+    for n, band in enumerate(bands):
+        offsets_and_mesh_functions = []
+        for multicell_index in multicell_grid:
+            R = multicell_grid[multicell_index]
+            offsets_and_mesh_functions.append((R, wannier_functions[n][multicell_index].real))
+            
+        job = fempy.stopwatch.tJob("visualizing band %d" % n)
+        visualization.visualizeSeveralMeshes("vtk", 
+                                             (",,result.vtk", ",,result_grid.vtk"), 
+                                             offsets_and_mesh_functions)
+        job.done()
+        raw_input("[enter] for next: ")
 
-    job = fempy.stopwatch.tJob("visualizing band %d" % n)
-    visualization.visualizeSeveralMeshes("vtk", 
-                                         (",,result.vtk", ",,result_grid.vtk"), 
-                                         omv)
-    job.done()
-    raw_input("[enter] for next: ")
+def addTuple(t1, t2):
+    return tuple([t1v + t2v for t1v, t2v in zip(t1, t2)])
+
+# bands to use in computation
+selected_bands = bands[:]
+n_bands = len(bands)
+
+k_grid_index_increments = [(1,0), (0,1)]
+
+# corresponds to M in Marzari's paper.
+# indexed by k_index and an index into k_grid_index_increments
+scalar_products = {}
+
+job = fempy.stopwatch.tJob("computing scalar products")
+for gbi in crystal.KGrid.gridBlockIndices():
+    for kgi_index, index_inc in enumerate(k_grid_index_increments):
+        other_index = addTuple(gbi, index_inc)
+        mat = num.zeros((n_bands, n_bands), num.Complex)
+        for i in range(n_bands):
+            for j in range(n_bands):
+                ev_i, em_i = bands[i][gbi]
+                ev_j, em_j = bands[j][other_index]
+                mat[i,j] = sp(em_i, em_j)
+        scalar_products[gbi, kgi_index] = mat
+job.done()
+

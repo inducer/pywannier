@@ -54,51 +54,6 @@ keys = range(len(list_of_ks))
 pc.writeEigenvalueLocusPlot(",,ev_locus.data", crystal, bands, 
                             [0*rl[0], 0.25 * rl[0], 0.5 * rl[0]])
 
-# ---------------------------------------------------------
-# make band diagram
-# ---------------------------------------------------------
-rl = crystal.Lattice.ReciprocalLattice
-k_track = [0*rl[0],
-           0.5*rl[0],
-           0.5*(rl[0]+rl[1]),
-           0*rl[0]]
-pc.writeBandDiagram(",,band_diagram.data", crystal, bands,
-                    tools.interpolateVectorList(k_track, 30))
-
-# ---------------------------------------------------------
-pc.visualizeBandsVTK(",,bands.vtk", crystal, bands[0:4])
-
-# ---------------------------------------------------------
-# visualize bloch functions
-
-multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
-                                   grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                   limits = [(-2,2)] * 2)
-
-dlb = crystal.Lattice.DirectLatticeBasis
-for k_index in crystal.KGrid:
-    k = crystal.KGrid[k_index]
-    print "k =",k
-
-    offsets_and_mesh_functions = []
-    for multicell_index in multicell_grid:
-        R = multicell_grid[multicell_index]
-        print "R = ", R
-
-        my_mode = cmath.exp(1.j * mtools.sp(k,R)) * bands[0][k_index][1]
-        offsets_and_mesh_functions.append((R, my_mode.real))
-    visualization.visualizeSeveralMeshes("vtk", 
-                                         (",,result.vtk", ",,result_grid.vtk"), 
-                                         offsets_and_mesh_functions)
-    raw_input("[enter for next]:")
-
-    # BLAH
-        factor = cmath.exp(1.j * mtools.sp(dlb[1], k))
-        print "bl = ", my_mode[bottom_left_node_number]
-        print "tl = ", my_mode[top_left_node_number]
-        print "bl * factor = ", my_mode[bottom_left_node_number] * factor
-        print "factor = ", factor
-              
 
 # ---------------------------------------------------------
 # bc verification
@@ -121,8 +76,8 @@ for k_index in crystal.KGrid:
 # ---------------------------------------------------------
 # orthogonality verification
 
+my_sp = fempy.mesh_function.tScalarProductCalculator(crystal.ScalarProduct)
 for key in crystal.KGrid:
-    my_sp = crystal.ScalarProduct[key]
 
     print "scalar products for k = ", crystal.KGrid[key]
     norms = []
@@ -136,8 +91,10 @@ for key in crystal.KGrid:
             sp = my_sp(evector, evector2) / (norms[index] * norms[index2])
             print "  %d, %d: %f" % (index, index2, abs(sp))
 
+
 # ---------------------------------------------------------
 # boundary derivative convergence
+
 eoc_rec = fempy.eoc.tEOCRecorder()
 for crystal in crystals[0:3]:
     periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
@@ -146,19 +103,24 @@ for crystal in crystals[0:3]:
     boundary_error = 0.
     for index in crystal.KGrid:
         k = crystal.KGrid[index]
-        for evalue, evector in crystal.Modes[index]:
+        for evalue, mode in crystal.Modes[index]:
             for gv, main_node, other_weights_and_nodes in periodicity_nodes:
-                my_sum = fempy.mesh_function.getGlobalSolutionGradient(crystal.Mesh, evector, main_node.Coordinates)
+                mesh = mode.mesh()
+                my_sum = mode.getGradient(main_node.Coordinates)
+                print my_sum
                 for node, weight in other_weights_and_nodes:
-                    #floquet_factor = cmath.exp(-1j * mtools.sp(gv, k))
-                    my_sum += -weight * \
-                              fempy.mesh_function.getGlobalSolutionGradient(crystal.Mesh, evector, node.Coordinates)
+                    floquet_factor = cmath.exp(1j * mtools.sp(gv, k))
+                    my_sum += -weight * floquet_factor * \
+                              mode.getGradient(node.Coordinates)
+                    print weight * floquet_factor * \
+                          mode.getGradient(node.Coordinates)
+                    raw_input()
                 boundary_error += tools.norm2squared(my_sum)
-                print boundary_error
+            print boundary_error
 
+        print k, boundary_error
     eoc_rec.addDataPoint(len(crystal.Mesh.elements())**0.5,
                          boundary_error ** 0.5)
 
 print "Boundary normal derivative EOC:", eoc_rec.estimateOrderOfConvergence()
-
 

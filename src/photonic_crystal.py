@@ -297,16 +297,14 @@ def visualizeBandsGnuplot(filename, crystal, bands):
         spot = k_grid[key]
         out_file.write("%f\t%f\t%f\n" % (spot[0], spot[1], scale_eigenvalue(band[key][0])))
 
-    def writeBlock((i,j)):
-        writePoint((i,j))
-        writePoint((i+1,j))
-        writePoint((i+1,j+1))
-        writePoint((i,j+1))
-        writePoint((i,j))
-        out_file.write("\n\n")
-    
     for band in bands:
-        k_grid.forEachBlock(writeBlock)
+        for i,j in k_grid.gridBlockIndices():
+            writePoint((i,j))
+            writePoint((i+1,j))
+            writePoint((i+1,j+1))
+            writePoint((i,j+1))
+            writePoint((i,j))
+            out_file.write("\n\n")
 
 
 
@@ -327,20 +325,19 @@ def visualizeBandsVTK(filename, crystal, bands):
         nodes.append((spot[0], spot[1], 5*scale_eigenvalue(band[key][0])))
         node_lookup[key] = node_number
 
-    def makeQuad((i,j)):
-        quads.append((
-            node_lookup[i,j],
-            node_lookup[i+1,j],
-            node_lookup[i+1,j+1],
-            node_lookup[i,j+1],
-            node_lookup[i,j]))
-    
     for band in bands:
         node_lookup = {}
         for k_index in k_grid:
             makeNode(k_index)
-        k_grid.forEachGridBlock(makeQuad)
 
+        for i,j in k_grid.gridBlockIndices():
+            quads.append((
+                node_lookup[i,j],
+                node_lookup[i+1,j],
+                node_lookup[i+1,j+1],
+                node_lookup[i,j+1],
+                node_lookup[i,j]))
+            
     structure = pyvtk.PolyData(points = nodes, polygons = quads)
     vtk = pyvtk.VtkData(structure, "Bands")
     vtk.tofile(filename, "ascii")
