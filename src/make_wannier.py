@@ -37,33 +37,28 @@ job = fempy.stopwatch.tJob("localizing bands")
 bands = pc.findBands(crystal)
 job.done()
 
-rl = crystal.Lattice.ReciprocalLattice
-k_track = [0*rl[0],
-           0.5*rl[0],
-           0.5*(rl[0]+rl[1]),
-           0*rl[0]]
-pc.writeBandDiagram(",,band_diagram.data", crystal, bands,
-                    tools.interpolateVectorList(k_track, 30))
-
 multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,
                                    limits = [(-2,2)] * 2)
 
 dlb = crystal.Lattice.DirectLatticeBasis
-for k_index in crystal.KGrid:
-    k = crystal.KGrid[k_index]
-    print "k =",k
+for band_index, band in enumerate(bands):
+    for k_index in crystal.KGrid:
+        k = crystal.KGrid[k_index]
+        print "band = ", band_index, "k =",k
+        
+        offsets_and_mesh_functions = []
+        for multicell_index in multicell_grid:
+            R = multicell_grid[multicell_index]
 
-    offsets_and_mesh_functions = []
-    for multicell_index in multicell_grid:
-        R = multicell_grid[multicell_index]
-
-        my_mode = cmath.exp(1.j * mtools.sp(k,R)) * bands[0][k_index][1]
-        offsets_and_mesh_functions.append((R, my_mode.real))
-    visualization.visualizeSeveralMeshes("vtk", 
-                                         (",,result.vtk", ",,result_grid.vtk"), 
-                                         offsets_and_mesh_functions)
-    raw_input("[enter for next]:")
+            my_mode = cmath.exp(1.j * mtools.sp(k,R)) * band[k_index][1]
+            offsets_and_mesh_functions.append((R, my_mode.real))
+        visualization.visualizeSeveralMeshes("vtk", 
+                                             (",,result.vtk", ",,result_grid.vtk"), 
+                                             offsets_and_mesh_functions)
+        value = raw_input("[b<enter> for next band, enter for next k in band]:")
+        if value == "b":
+            break
 
 sys.exit(0)
 
