@@ -1,7 +1,5 @@
-import math
-import cmath
-import cPickle
-import sets
+import math, cmath, sets, sys
+import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
 import pylinear.matrices as num
@@ -125,7 +123,7 @@ def main():
                                                     refine_steps = 0, # 4
                                                     k_grid_points = 8)
     job = fempy.stopwatch.tJob("saving")
-    cPickle.dump(crystals, file(",,crystal.pickle", "wb"), cPickle.HIGHEST_PROTOCOL)
+    pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
     job.done()
 
 main()
