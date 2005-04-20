@@ -1,6 +1,6 @@
 import fempy.tools as tools
 import photonic_crystal as pc
-import pylinear.matrices as num
+import pylinear.array as num
 import math
 
 dimensions = 2

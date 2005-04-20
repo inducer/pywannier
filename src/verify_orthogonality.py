@@ -2,13 +2,8 @@ import math, cmath, sys, operator, random
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
-import pylinear.linear_algebra as la
-import pylinear.algorithms as algo
-import pylinear.matrix_tools as mtools
-import pylinear.iteration as iteration
-
-import scipy.optimize
+import pylinear.array as num
+import pylinear.toybox as toybox
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -36,7 +31,7 @@ def verifyBandOrthogonality(crystal, spc, bands, threshold):
                 emode1 = bands[index1][k_index][1]
                 emode2 = bands[index2][k_index][1]
                 sp = spc(emode1, emode2) 
-                err = abs(sp-mtools.delta(index1, index2))
+                err = abs(sp-toybox.delta(index1, index2))
                 if err >= threshold:
                     print k_index, index1, index2, err, "is over the threshold"
                     violations += 1

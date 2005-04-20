@@ -2,9 +2,7 @@ import math, cmath, sys, operator
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
-import pylinear.linear_algebra as la
-import pylinear.matrix_tools as mtools
+import pylinear.array as num
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -60,7 +58,7 @@ def computeWanniers(crystal, bands):
             R = multicell_grid[multicell_index]
             def function_in_integral(k_index):
                 k = crystal.KGrid[k_index]
-                return cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
+                return cmath.exp(1.j*k*R)) * band[k_index][1]
 
             this_wannier_function[multicell_index] = \
                                                    tools.getParallelogramVolume(crystal.Lattice.DirectLatticeBasis) \

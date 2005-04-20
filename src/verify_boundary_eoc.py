@@ -1,11 +1,6 @@
 import math, cmath, sys, operator
 import cPickle as pickle
 
-# Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
-import pylinear.linear_algebra as la
-import pylinear.matrix_tools as mtools
-
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
 import fempy.stopwatch
@@ -20,8 +15,6 @@ import fempy.spatial_btree as spatial_btree
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
 
-sp = mtools.sp
-
 job = fempy.stopwatch.tJob("loading")
 crystals = pickle.load(file(",,crystal.pickle", "rb"))
 job.done()
@@ -33,12 +26,12 @@ def getBCResidual(mode, node1, node2, k, pnodes):
         if node1_grid_vector is not node2_grid_vector:
             return 0
         gv = node1_grid_vector
-        floquet_factor = cmath.exp(1j * mtools.sp(gv, k))
+        floquet_factor = cmath.exp(1j * (gv*k))
 
         def fii(point):
             return tools.absSquared(
-                 sp(mode.getGradient(point + gv), gv)
-                - sp(floquet_factor * mode.getGradient(point), gv))
+                (mode.getGradient(point + gv)*gv)
+                - (floquet_factor * mode.getGradient(point)*gv))
         result = fempy.integration.integrateAlongLine(
             node1.Coordinates, node2.Coordinates, fii)
         return result

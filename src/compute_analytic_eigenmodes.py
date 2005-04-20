@@ -1,4 +1,4 @@
-import pylinear.matrices as num
+import pylinear.array as num
 import math, cmath
 import fempy.tools as tools
 import fempy.stopwatch
@@ -7,17 +7,19 @@ import fempy.solver
 import photonic_crystal as pc
 import cPickle as pickle
 
-lattice = pc.tBravaisLattice([num.array([1,0]), num.array([0, 1])])
+grid_vectors = [num.array([1,0]), num.array([0, 1])]
+lattice = pc.tBravaisLattice(grid_vectors)
 
 rl = lattice.ReciprocalLattice
 k_grid  = tools.makeCellCenteredGrid(-0.5*(rl[0]+rl[1]), rl,
                                      [(0, 20)] * 2)
 
 job = fempy.stopwatch.tJob("geometry")
-mesh = pc.generateSquareMeshWithRodCenter(lattice, 0.18)
+mesh, boundary = pc.generateSquareMeshWithRodCenter(lattice, 0.18)
 job.done()
 
-periodicity_nodes = pc.findPeriodicityNodes(mesh, lattice.DirectLatticeBasis)
+periodicity_nodes = pc.findPeriodicityNodes(mesh, boundary, 
+                                            lattice.DirectLatticeBasis)
 
 unconstrained_nodes = [node for node in mesh.dofManager() if node not in periodicity_nodes]
 number_assignment = fempy.element.assignNodeNumbers(unconstrained_nodes)
@@ -25,9 +27,10 @@ complete_number_assignment = fempy.element.assignNodeNumbers(periodicity_nodes,
                                                              number_assignment)
 crystal = pc.tPhotonicCrystal(lattice,
                               mesh,
+                              boundary,
                               k_grid,
-                              has_inversion_symmetry = True,
-                              epsilon = pc.tConstantFunction(1)) 
+                              has_inversion_symmetry=True,
+                              epsilon=pc.tConstantFunction(1)) 
 
 crystal.Modes = tools.tDependentDictionary(pc.tReducedBrillouinModeListLookerUpper(k_grid))
 crystal.MassMatrix = fempy.solver.buildMassMatrix(mesh, complete_number_assignment,

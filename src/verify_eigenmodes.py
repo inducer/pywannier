@@ -2,9 +2,7 @@ import math, cmath, sets, sys
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
-import pylinear.linear_algebra as la
-import pylinear.matrix_tools as mtools
+import pylinear.array as num
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh

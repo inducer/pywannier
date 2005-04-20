@@ -2,11 +2,9 @@ import math, cmath, sys, operator, random
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
+import pylinear.array as num
 import pylinear.linear_algebra as la
-import pylinear.algorithms as algo
-import pylinear.matrix_tools as mtools
-import pylinear.iteration as iteration
+import pylinear.operation as op
 
 import scipy.optimize
 
@@ -47,11 +45,11 @@ for crystal in crystals:
                 my_periodic_sum = -pmode[dependent_node]
                 for node, weight in independent_nodes:
                     my_coord_sum += weight * node.Coordinates
-                    my_sum += weight * cmath.exp(-1j * mtools.sp(gv, k)) \
+                    my_sum += weight * cmath.exp(-1j * (gv*k)) \
                               * mode[node]
                     my_periodic_sum += weight * pmode[node]
 
-                assert mtools.norm2(my_coord_sum) < 1e-9
+                assert op.norm_2(my_coord_sum) < 1e-9
                 assert abs(my_sum) < 1e-9
                 assert abs(my_periodic_sum) < 1e-9
     job.done()

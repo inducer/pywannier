@@ -3,9 +3,7 @@ import cmath
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
-import pylinear.linear_algebra as la
-import pylinear.matrix_tools as mtools
+import pylinear.array as num
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -58,7 +56,7 @@ for band_index, band in enumerate(crystal.Bands):
                     R = multicell_grid[multicell_index]
 
                     if value == "p":
-                        my_mode = bloch_mode * cmath.exp(1.j * mtools.sp(k, R))
+                        my_mode = bloch_mode * cmath.exp(1.j*k*R)
                     else:
                         my_mode = periodic_mode
                     f_on_grid[multicell_index] = my_mode.imaginary

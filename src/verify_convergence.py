@@ -9,8 +9,8 @@ import fempy.stopwatch
 import fempy.geometry
 import fempy.visualization as visualization
 import photonic_crystal as pc
-import pylinear.matrices as num
-import pylinear.matrix_tools as mtools
+import pylinear.array as num
+import pylinear.operation as op
 import math, cmath
 
 CONSIDERED_EVALUES = 5

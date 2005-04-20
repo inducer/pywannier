@@ -2,9 +2,10 @@ import math, cmath, sys, random
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
+import pylinear.array as num
 import pylinear.linear_algebra as la
-import pylinear.matrix_tools as mtools
+import pylinear.operation as op
+import pylinear.toybox as toybox
 import pylinear.iteration as iteration
 
 import scipy.optimize
@@ -84,13 +85,13 @@ def matrixToList(num_mat):
 def makeRandomKDependentSkewHermitianMatrix(crystal, size, tc):
     matrix = tKDependentMatrix
     for k_index in crystal.KGrid:
-        matrix[k_index] = mtools.makeRandomSkewHermitianMatrix(size, tc)
+        matrix[k_index] = randomized.make_random_skewhermitian_matrix(size, tc)
     return matrix
 
 def gradScalarProduct(a1, a2):
     rp = num.multiply(a1.real, a2.real)
     ip = num.multiply(a1.imaginary, a2.imaginary)
-    return mtools.entrySum(rp) + mtools.entrySum(ip)
+    return num.sum(rp) + num.sum(ip)
 
 def kDependentMatrixGradientScalarProduct(k_grid, a1, a2):
     # we can't use complex multiplication since our "complex" number
@@ -100,7 +101,7 @@ def kDependentMatrixGradientScalarProduct(k_grid, a1, a2):
     for k_index in k_grid:
         rp = num.multiply(a1[k_index].real, a2[k_index].real)
         ip = num.multiply(a1[k_index].imaginary, a2[k_index].imaginary)
-        sp += mtools.entrySum(rp) + mtools.entrySum(ip)
+        sp += num.sum(rp) + num.sum(ip)
     return sp / k_grid.gridPointCount()
 
 def operateOnKDependentMatrix(k_grid, a, m_op):
@@ -118,7 +119,7 @@ def operateOnKDependentMatrices(k_grid, a1, a2, m_op):
 def frobeniusNormOnKDependentMatrices(k_grid, mat):
     result = 0
     for k_index in k_grid:
-        result += mtools.frobeniusNorm(mat[k_index])
+        result += op.norm_frobenius(mat[k_index])
     return result
 
 def symmetricPart(matrix):
@@ -350,7 +351,7 @@ class tKSpaceDirectionalWeights:
         self.KGridIncrements = [crystal.KGrid[kgii] - crystal.KGrid[0,0]
                                 for kgii in self.KGridIndexIncrements]
 
-        self.KWeights = [0.5 / mtools.norm2squared(kgi)
+        self.KWeights = [0.5 / op.norm_2_squared(kgi)
                          for kgi in self.KGridIncrements]
 
         # verify...
@@ -410,7 +411,7 @@ class tMarzariSpreadMinimizer:
                     for j in range(n_bands):
                         mat[i,j] = self.ScalarProductCalculator(pbands[i][added_tuple][1], 
                                                                 pbands[j][k_index][1])
-                err = mtools.frobeniusNorm(mat - scalar_products[k_index, kgii]) 
+                err = op.norm_frobenius(mat - scalar_products[k_index, kgii]) 
                 if err > 1e-13:
                     violations.append((k_index, kgii, err))
 
@@ -424,7 +425,7 @@ class tMarzariSpreadMinimizer:
         new_scalar_products = {}
         for k_index in self.Crystal.KGrid:
             if self.DebugMode:
-                assert mtools.unitarietyError(mix_matrix[k_index]) < 1e-8
+                assert toybox.unitariety_error(mix_matrix[k_index]) < 1e-8
 
             for kgii in self.KWeights.HalfTheKGridIndexIncrements:
                 added_tuple = self.Crystal.KGrid.reducePeriodically(
@@ -498,7 +499,7 @@ class tMarzariSpreadMinimizer:
                                          + arg(scalar_products[k_index, kgii][n,n], 
                                                (k_index, kgii, n))**2)
             mean_r_squared /= self.Crystal.KGrid.gridPointCount()
-            total_spread_f += mean_r_squared - mtools.norm2squared(wannier_centers[n])
+            total_spread_f += mean_r_squared - op.norm_2_squared(wannier_centers[n])
         return total_spread_f
 
     def badWannierCenters(self, n_bands, scalar_products):
@@ -533,7 +534,7 @@ class tMarzariSpreadMinimizer:
                     mean_r_squared += self.KWeights.KWeights[kgii_index] \
                               * (2 - 2 * scalar_products[k_index, kgii][n,n].real)
             mean_r_squared /= self.Crystal.KGrid.gridPointCount()
-            total_spread_f += mean_r_squared - mtools.norm2squared(wannier_centers[n])
+            total_spread_f += mean_r_squared - op.norm_2_squared(wannier_centers[n])
         return total_spread_f
 
     def omegaI(self, n_bands, scalar_products):
@@ -544,7 +545,7 @@ class tMarzariSpreadMinimizer:
                     continue
 
                 omega_i += self.KWeights.KWeights[kgii_index] \
-                           * (n_bands - mtools.frobeniusNormSquared(scalar_products[k_index, kgii]))
+                           * (n_bands - op.norm_frobenius_squared(scalar_products[k_index, kgii]))
         return omega_i / self.Crystal.KGrid.gridPointCount()
 
     def omegaOD(self, scalar_products):
@@ -574,7 +575,7 @@ class tMarzariSpreadMinimizer:
                     omega_d += self.KWeights.KWeights[kgii_index] \
                                * (arg(scalar_products[k_index,kgii][n,n], 
                                       (k_index, kgii, n)) \
-                                  + mtools.sp(wannier_centers[n], b))**2
+                                  + (wannier_centers[n]*b))**2
         return omega_d / self.Crystal.KGrid.gridPointCount()
 
     def spreadFunctionalViaOmegas(self, n_bands, scalar_products, arg, wannier_centers = None):
@@ -604,7 +605,7 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r2[i,j] = m[j,i].conjugate() * m[j,j]
-                    assert mtools.frobeniusNorm(r-r2) < 1e-15
+                    assert op.norm_frobenius(r-r2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
                           (-skewSymmetricPart(r.real.T)
@@ -618,22 +619,22 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
-                    assert mtools.frobeniusNorm(r_tilde-r_tilde2) < 1e-13
+                    assert op.norm_frobenius(r_tilde-r_tilde2) < 1e-13
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
                     q[n] = arg(m_diagonal[n], (k_index, kgii, n))
 
                 for n in range(n_bands):
-                    q[n] += mtools.sp(self.KWeights.KGridIncrements[kgii_index], 
-                                      wannier_centers[n])
+                    q[n] += self.KWeights.KGridIncrements[kgii_index] \
+                            * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
                 if self.DebugMode:
                     t2 = num.zeros((n_bands, n_bands), num.Complex)
                     for i in range(n_bands):
                         for j in range(n_bands):
                             t2[i,j] = r_tilde[i,j] * q[j]
-                    assert mtools.frobeniusNorm(t-t2) < 1e-15
+                    assert op.norm_frobenius(t-t2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
                           (-skewSymmetricPart(t.imaginary.T)
@@ -665,7 +666,7 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r2[i,j] = m[j,i].conjugate() * m[j,j]
-                    assert mtools.frobeniusNorm(r-r2) < 1e-15
+                    assert op.norm_frobenius(r-r2) < 1e-15
 
                 result += -2. * self.KWeights.KWeights[kgii_index] * \
                           (r-r.H)
@@ -695,7 +696,7 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r2[i,j] = m[j,i].conjugate() * m[j,j]
-                    assert mtools.frobeniusNorm(r-r2) < 1e-15
+                    assert op.norm_frobenius(r-r2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
                           (-skewSymmetricPart(r.real.T)
@@ -725,22 +726,22 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
-                    assert mtools.frobeniusNorm(r_tilde-r_tilde2) < 1e-13
+                    assert op.norm_frobenius(r_tilde-r_tilde2) < 1e-13
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
                     q[n] = arg(m_diagonal[n], (k_index, kgii, n))
 
                 for n in range(n_bands):
-                    q[n] += mtools.sp(self.KWeights.KGridIncrements[kgii_index], 
-                                      wannier_centers[n])
+                    q[n] += self.KWeights.KGridIncrements[kgii_index] \
+                            * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
                 if self.DebugMode:
                     t2 = num.zeros((n_bands, n_bands), num.Complex)
                     for i in range(n_bands):
                         for j in range(n_bands):
                             t2[i,j] = r_tilde[i,j] * q[j]
-                    assert mtools.frobeniusNorm(t-t2) < 1e-15
+                    assert op.norm_frobenius(t-t2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
                           (-skewSymmetricPart(t.imaginary.T)
@@ -772,22 +773,22 @@ class tMarzariSpreadMinimizer:
                     for i in range(n_bands):
                         for j in range(n_bands):
                             r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
-                    assert mtools.frobeniusNorm(r_tilde-r_tilde2) < 1e-13
+                    assert op.norm_frobenius(r_tilde-r_tilde2) < 1e-13
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
                     q[n] = arg(m_diagonal[n], (k_index, kgii, n))
 
                 for n in range(n_bands):
-                    q[n] += mtools.sp(self.KWeights.KGridIncrements[kgii_index], 
-                                      wannier_centers[n])
+                    q[n] += self.KWeights.KGridIncrements[kgii_index] \
+                            * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
                 if self.DebugMode:
                     t2 = num.zeros((n_bands, n_bands), num.Complex)
                     for i in range(n_bands):
                         for j in range(n_bands):
                             t2[i,j] = r_tilde[i,j] * q[j]
-                    assert mtools.frobeniusNorm(t-t2) < 1e-15
+                    assert op.norm_frobenius(t-t2) < 1e-15
 
                 result += -2. * self.KWeights.KWeights[kgii_index] * \
                           (t+t.H)
@@ -800,11 +801,11 @@ class tMarzariSpreadMinimizer:
         for k_index in self.Crystal.KGrid:
             dW = factor * gradient[k_index]
             if self.DebugMode:
-                assert mtools.skewHermiticityError(dW) < 1e-13
+                assert toybox.skewhermiticity_error(dW) < 1e-13
 
-            exp_dW = mtools.matrixExpByDiagonalization(dW)
+            exp_dW = toybox.matrix_exp_by_diagonalization(dW)
             if self.DebugMode:
-                assert mtools.unitarietyError(exp_dW) < 1e-13
+                assert toybox.unitariety_error(exp_dW) < 1e-13
 
             temp_mix_matrix[k_index] = exp_dW * prev_mix_matrix[k_index]
 
@@ -822,8 +823,8 @@ class tMarzariSpreadMinimizer:
 
         for k_index in self.Crystal.KGrid:
             for kgii in self.KWeights.KGridIndexIncrements:
-                assert mtools.frobeniusNorm(sps_direct[k_index, kgii]
-                                           - sps_updated[k_index, kgii]) < 1e-13
+                assert op.norm_frobenius(sps_direct[k_index, kgii]
+                                         - sps_updated[k_index, kgii]) < 1e-13
 
         arg = tContinuityAwareArg()
         sf1 = self.spreadFunctional(len(pbands), sps_updated, arg.copy())
@@ -849,7 +850,7 @@ class tMarzariSpreadMinimizer:
                     omega_od_matrices.append(sps[k_index, kgii].copy())
 
         job = fempy.stopwatch.tJob("pre-minimization")
-        q, diag_mats, tol = mtools.codiagonalize(omega_od_matrices)
+        q, diag_mats, tol = toybox.codiagonalize(omega_od_matrices)
         job.done()
 
         for k_index in self.Crystal.KGrid:
@@ -863,7 +864,7 @@ class tMarzariSpreadMinimizer:
     def minimizeSpread(self, pbands, mix_matrix):
         if self.DebugMode:
             for ii in self.Crystal.KGrid:
-                assert mtools.unitarietyError(mix_matrix[ii]) < 5e-3
+                assert toybox.unitariety_error(mix_matrix[ii]) < 5e-3
 
         self.testSPUpdater(pbands, mix_matrix)
 
@@ -956,9 +957,7 @@ class tMarzariSpreadMinimizer:
 
                             half_doiod_here3 = -2*w_b*num.trace(mm(dw, r)).real
 
-                            doiod_here4 = -2*w_b*mtools.sp(
-                                num.diagonal(dm2),
-                                m_diagonal).real
+                            doiod_here4 = -2*w_b*(num.diagonal(dm2)*m_diagonal.H).real
                             doiod4 += doiod_here4
 
                             half_a_doiod_here5 = -2*w_b*sum(num.multiply(num.diagonal(dw_plusb*m_plusb.H),
@@ -979,13 +978,13 @@ class tMarzariSpreadMinimizer:
 
                             if print_count:
                                 #print k_index, kgii
-                                #print "dw", mtools.frobeniusNorm(dw)
-                                #print "dm1", mtools.frobeniusNorm(dm1)
-                                #print "dm2", mtools.frobeniusNorm(dm2)
+                                #print "dw", op.norm_frobenius(dw)
+                                #print "dm1", op.norm_frobenius(dm1)
+                                #print "dm2", op.norm_frobenius(dm2)
                                 #print "dm2-dm1", \
-                                      #mtools.frobeniusNorm(dm2-dm1) \
-                                      #/ mtools.frobeniusNorm(dm1), \
-                                      #" - abs:", mtools.frobeniusNorm(dm2-dm1)
+                                      #op.norm_frobenius(dm2-dm1) \
+                                      #/ op.norm_frobenius(dm1), \
+                                      #" - abs:", op.norm_frobenius(dm2-dm1)
                                 #print "doiod_here", doiod_here2, doiod_here4
                                 #print "b and c", doiod_here2b, doiod_here2c
                                 print "doiod_here", k_index, kgii, half_doiod_here3, half_a_doiod_here5, half_b_doiod_here5
@@ -1055,7 +1054,7 @@ class tMarzariSpreadMinimizer:
     def minimizeSpread2(self, pbands, mix_matrix):
         if self.DebugMode:
             for ii in self.Crystal.KGrid:
-                assert mtools.unitarietyError(mix_matrix[ii]) < 5e-3
+                assert toybox.unitariety_error(mix_matrix[ii]) < 5e-3
 
         self.testSPUpdater(pbands, mix_matrix)
 
@@ -1133,7 +1132,7 @@ def computeWanniers(crystal, bands, wannier_grid):
             R = wannier_grid[wannier_index]
             def function_in_integral(k_index, k):
                 k = crystal.KGrid[k_index]
-                return cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
+                return cmath.exp(1.j * (k*R)) * band[k_index][1]
 
             this_wf[wannier_index] = integrateOverKGrid(crystal.KGrid, 
                                                         function_in_integral)
@@ -1176,7 +1175,7 @@ def generateRandomGaussians(crystal, typecode):
         # FIXME this is dependent on dlb actually being unit vectors
         def gaussian(point):
             arg = sigma_inv*(point - center)
-            return math.exp(-mtools.norm2squared(arg))
+            return math.exp(-op.norm_2_squared(arg))
 
         yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 
                                                      gaussian, 
@@ -1247,10 +1246,10 @@ def run():
 
     assert abs(integrateOverKGrid(
         crystal.KGrid, 
-        lambda k_index, k: cmath.exp(1j*mtools.sp(k, num.array([5.,17.]))))) < 1e-10
+        lambda k_index, k: cmath.exp(1j*(k * num.array([5.,17.]))))) < 1e-10
     assert abs(1- integrateOverKGrid(
         crystal.KGrid, 
-        lambda k_index, k: cmath.exp(1j*mtools.sp(k, num.array([0.,0.]))))) < 1e-10
+        lambda k_index, k: cmath.exp(1j*(k * num.array([0.,0.]))))) < 1e-10
 
     sp = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
                                                       crystal.MassMatrix)

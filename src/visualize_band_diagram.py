@@ -3,8 +3,8 @@ import fempy.solver
 import fempy.mesh
 import fempy.visualization
 import photonic_crystal as pc
-import pylinear.matrices as num
-import pylinear.matrix_tools as mtools
+import pylinear.array as num
+import pylinear.operation as op
 import math, cmath
 
 lowest_functions = []
@@ -44,7 +44,7 @@ class t1DProblem:
         m = num.asarray(m, s.typecode(), num.DenseMatrix)
         total_s = mm(a, mm(s, num.hermite(a)))
         total_m = mm(a, mm(m, num.hermite(a)))
-        return mtools.estimateConditionNumber(total_s), mtools.estimateConditionNumber(total_s, 1)
+        return op.spectral_condition_number(total_s), op.spectral_condition_number(total_s, 1)
 
     def getEigenvalues(self, k):
         rl = self.Lattice.ReciprocalLattice

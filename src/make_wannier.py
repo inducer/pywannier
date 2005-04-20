@@ -2,9 +2,8 @@ import math, cmath, sys, operator
 import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
-import pylinear.matrices as num
-import pylinear.linear_algebra as la
-import pylinear.matrix_tools as mtools
+import pylinear.array as num
+import pylinear.operation as op
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -60,7 +59,7 @@ def computeWanniers(crystal, bands):
             R = multicell_grid[multicell_index]
             def function_in_integral(k_index):
                 k = crystal.KGrid[k_index]
-                return cmath.exp(1.j * mtools.sp(k, R)) * band[k_index][1]
+                return cmath.exp(1.j * (k*R)) * band[k_index][1]
 
             this_wannier_function[multicell_index] = \
                                                    tools.getParallelogramVolume(crystal.Lattice.DirectLatticeBasis) \
@@ -97,7 +96,7 @@ k_grid_index_increments = [tuple(i)
                            for i in tools.enumerateBasicDirections(2)]
 k_grid_increments = [crystal.KGrid[kgi] - crystal.KGrid[0,0]
                      for kgi in k_grid_index_increments]
-k_weights = [1/(2. * mtools.norm2squared(kgi))
+k_weights = [1/(2. * op.norm_2_squared(kgi))
              for kgi in k_grid_increments]
 
 # corresponds to M in Marzari's paper.
