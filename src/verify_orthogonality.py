@@ -21,7 +21,7 @@ import photonic_crystal as pc
 
 
 
-def verifyBandOrthogonality(crystal, spc, bands, threshold):
+def verify_band_orthogonality(crystal, spc, bands, threshold):
     violations = 0
     total = 0
     for k_index in crystal.KGrid:
@@ -49,12 +49,12 @@ def run():
                                                            crystal.MassMatrix)
 
         job = fempy.stopwatch.tJob("checking bloch functions")
-        vio, tot = verifyBandOrthogonality(crystal, spc, crystal.Bands, 2e-3)
+        vio, tot = verify_band_orthogonality(crystal, spc, crystal.Bands, 2e-3)
         job.done()
         print vio, "violations out of", tot
 
         job = fempy.stopwatch.tJob("checking periodicized bloch functions")
-        vio, tot = verifyBandOrthogonality(crystal, spc, crystal.PeriodicBands, 3e-3)
+        vio, tot = verify_band_orthogonality(crystal, spc, crystal.PeriodicBands, 3e-3)
         job.done()
         print vio, "violations out of", tot
 

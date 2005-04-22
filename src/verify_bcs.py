@@ -21,16 +21,16 @@ import fempy.visualization as visualization
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
 
-job = fempy.stopwatch.tJob("loading")
+job = fempy.stopwatch.Job("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
 for crystal in crystals:
-    periodicity_nodes = pc.findPeriodicityNodes(crystal.Mesh, 
-                                                crystal.BoundaryShapeSection,
-                                                crystal.Lattice.DirectLatticeBasis)
+    periodicity_nodes = pc.find_periodicity_nodes(crystal.Mesh, 
+                                                  crystal.BoundaryShapeSection,
+                                                  crystal.Lattice.DirectLatticeBasis)
 
-    job = fempy.stopwatch.tJob("checking")
+    job = fempy.stopwatch.Job("checking")
     for band_index in range(len(crystal.Bands)):
         band = crystal.Bands[band_index]
         pband = crystal.PeriodicBands[band_index]

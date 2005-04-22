@@ -15,7 +15,7 @@ import pylinear.toybox as toybox
 
 
 
-class tConstantFunction:
+class ConstantFunction:
     def __init__(self, value):
         self.Value = value
 
@@ -25,7 +25,7 @@ class tConstantFunction:
 
 
 
-class tStepFunction:
+class StepFunction:
     def __init__(self, left_value, step_at, right_value):
         self.LeftValue = left_value
         self.StepAt = step_at
@@ -40,7 +40,7 @@ class tStepFunction:
 
 
 
-class tCircularFunctionRemapper:
+class CircularFunctionRemapper:
     def __init__(self, f):
         self.Function = f
 
@@ -50,7 +50,7 @@ class tCircularFunctionRemapper:
 
 
 
-class tBravaisLattice:
+class BravaisLattice:
     def __init__(self, direct_lattice_basis):
         self.DirectLatticeBasis = direct_lattice_basis
                          
@@ -80,7 +80,7 @@ class tBravaisLattice:
 
 
 
-class tPhotonicCrystal:
+class PhotonicCrystal:
     def __init__(self, lattice, mesh, boundary, k_grid, has_inversion_symmetry, 
                  epsilon):
         self.Lattice = lattice
@@ -101,51 +101,51 @@ class tPhotonicCrystal:
 
 
     
-def invertKIndex(k_grid, k_index):
+def invert_k_index(k_grid, k_index):
     return  tuple([(high-1-(idx-low))+low
                    for (idx, (low, high)) in zip(k_index, k_grid.limits())])
 
 
 
 
-class tInvertedModeLookerUpper:
+class InvertedModeLookerUpper:
     def __init__(self, k_grid):
         self.KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
-        new_key = invertKIndex(self.KGrid, failed_key)
+        new_key = invert_k_index(self.KGrid, failed_key)
         eigenvalue, eigenmode = dictionary[new_key]
         return (eigenvalue.conjugate(), eigenmode.conjugate())
 
 
 
 
-class tInvertedModeListLookerUpper:
+class InvertedModeListLookerUpper:
     def __init__(self, k_grid):
         self.KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
-        new_key = invertKIndex(self.KGrid, failed_key)
+        new_key = invert_k_index(self.KGrid, failed_key)
         modelist = dictionary[new_key]
-        return tools.tFakeList(lambda i: (modelist[i][0].conjugate(),
-                                          modelist[i][1].conjugate()),
-                               len(modelist))
+        return tools.FakeList(lambda i: (modelist[i][0].conjugate(),
+                                         modelist[i][1].conjugate()),
+                              len(modelist))
 
 
 
 
-class tInvertedIdenticalLookerUpper:
+class InvertedIdenticalLookerUpper:
     def __init__(self, k_grid):
         self.KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
-        new_key = invertKIndex(self.KGrid, failed_key)
+        new_key = invert_k_index(self.KGrid, failed_key)
         return dictionary[new_key]
 
 
 
 
-class tReducedBrillouinModeListLookerUpper:
+class ReducedBrillouinModeListLookerUpper:
     """This class is meant as lookup function for a tools.tDependentDictionary.
     It will map all of k-space to the left (k[0]<0) half of the Brillouin zone,
     excluding the top rim.
@@ -154,16 +154,16 @@ class tReducedBrillouinModeListLookerUpper:
     """
 
     def __init__(self, k_grid):
-        self.HSize = k_grid.gridPointCounts()[0]
+        self.HSize = k_grid.grid_point_counts()[0]
         self.KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
-        reduced_key = self.KGrid.reducePeriodically(failed_key)
+        reduced_key = self.KGrid.reduce_periodically(failed_key)
         if self.KGrid[reduced_key][0] > 0:
-            inverted_key = invertKIndex(self.KGrid, reduced_key)
+            inverted_key = invert_k_index(self.KGrid, reduced_key)
             modelist = dictionary[inverted_key]
-            return tools.tFakeList(lambda i: (modelist[i][0].conjugate(),
-                                              modelist[i][1].conjugate()),
+            return tools.FakeList(lambda i: (modelist[i][0].conjugate(),
+                                             modelist[i][1].conjugate()),
                                    len(modelist))
         else:
             # only needs reduction
@@ -172,7 +172,7 @@ class tReducedBrillouinModeListLookerUpper:
 
 
 
-class tReducedBrillouinLookerUpper:
+class ReducedBrillouinLookerUpper:
     """This class is meant as lookup function for a tools.tDependentDictionary.
     It will map all of k-space to the left (k[0]<0) half of the Brillouin zone,
     excluding the top rim.
@@ -185,9 +185,9 @@ class tReducedBrillouinLookerUpper:
         self.KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
-        reduced_key = self.KGrid.reducePeriodically(failed_key)
+        reduced_key = self.KGrid.reduce_periodically(failed_key)
         if self.KGrid[reduced_key][0] > 0:
-            inverted_key = invertKIndex(self.KGrid, reduced_key)
+            inverted_key = invert_k_index(self.KGrid, reduced_key)
             evalue, mode = dictionary[inverted_key]
             return evalue.conjugate(), mode.conjugate()
         else:
@@ -197,29 +197,29 @@ class tReducedBrillouinLookerUpper:
 
 
 
-class tKPeriodicLookerUpper:
+class KPeriodicLookerUpper:
     def __init__(self, k_grid):
         self._KGrid = k_grid
 
     def __call__(self, dictionary, failed_key):
-        return dictionary[self._KGrid.reducePeriodically(failed_key)]
+        return dictionary[self._KGrid.reduce_periodically(failed_key)]
 
 
 
 
-def makeKPeriodicLookupStructure(k_grid, dictionary = {}):
-    return tools.tDependentDictionary(tKPeriodicLookerUpper(k_grid), 
-                                      dictionary)
+def make_k_periodic_lookup_structure(k_grid, dictionary = {}):
+    return tools.DependentDictionary(KPeriodicLookerUpper(k_grid), 
+                                     dictionary)
 
 
 
 
-def findPeriodicityNodes(mesh, boundary, grid_vectors, order = 2):
+def find_periodicity_nodes(mesh, boundary, grid_vectors, order = 2):
     bnodes = [node 
               for node in mesh.dofManager()
               if node.TrackingId == "floquet"]
     
-    job = fempy.stopwatch.tJob("periodicity")
+    job = fempy.stopwatch.Job("periodicity")
 
     periodicity_nodes = {}
     for node in bnodes:
@@ -280,7 +280,7 @@ def findPeriodicityNodes(mesh, boundary, grid_vectors, order = 2):
 
 
 
-def getFloquetConstraints(periodicity_nodes, k):
+def get_floquet_constraints(periodicity_nodes, k):
     constraints = {}
     for dependent_node, (gv, independent_nodes) in periodicity_nodes.iteritems():
         lincomb_specifier = []
@@ -293,7 +293,7 @@ def getFloquetConstraints(periodicity_nodes, k):
 
 
 
-class tBand:
+class Band:
     def __init__(self, crystal, modes, indices):
         self.Crystal = crystal
         self.Modes = modes
@@ -304,7 +304,7 @@ class tBand:
         self.MinAbsolute = min(ev_abs)
 
     def copy(self, new_modes = None):
-        return tBand(self.Crystal, new_modes or self.Modes, self.Indices)
+        return Band(self.Crystal, new_modes or self.Modes, self.Indices)
 
     def __getitem__(self, k_index):
         return self.Modes[k_index][self.Indices[k_index]]
@@ -312,7 +312,7 @@ class tBand:
 
 
 
-def findDegeneracies(crystal, threshold = 1e-3):
+def find_degeneracies(crystal, threshold = 1e-3):
     result = {}
     for k_index in crystal.KGrid:
         indices = range(len(crystal.Modes[k_index]))
@@ -338,13 +338,13 @@ def findDegeneracies(crystal, threshold = 1e-3):
         
    
 
-def findBands(crystal, modes, scalar_product_calculator):
+def find_bands(crystal, modes, scalar_product_calculator):
     """Requires the eigenmodes to have norm 1.
 
-    Returns a list of tBand objects.
+    Returns a list of Band objects.
     """
 
-    all_dirs = tools.enumerateBasicDirections(2)
+    all_dirs = tools.enumerate_basic_directions(2)
     spc = scalar_product_calculator
     k_grid = crystal.KGrid
     
@@ -352,11 +352,11 @@ def findBands(crystal, modes, scalar_product_calculator):
     for k_index in k_grid:
         taken_eigenvalues[k_index] = sets.Set()
 
-    def findNeighbors(k_index, k_index_increment, max_count, band):
+    def find_neighbors(k_index, k_index_increment, max_count, band):
         result = []
         for step_count in range(max_count):
-            k_index = k_grid.reducePeriodically(
-                tools.addTuples(k_index, k_index_increment))
+            k_index = k_grid.reduce_periodically(
+                tools.add_tuples(k_index, k_index_increment))
 
             if k_index in band:
                 result.append(k_index)
@@ -364,7 +364,7 @@ def findBands(crystal, modes, scalar_product_calculator):
                 return result
         return result
 
-    def findClosestAt(k_index, eigenvalues, eigenmodes):
+    def find_closest_at(k_index, eigenvalues, eigenmodes):
         indices = [i 
                    for i in range(len(modes[k_index]))
                    if i not in taken_eigenvalues[k_index]]
@@ -400,8 +400,8 @@ def findBands(crystal, modes, scalar_product_calculator):
 
             return best_index_joint
 
-    def findBand(band_index):
-        band_indices = makeKPeriodicLookupStructure(k_grid)
+    def find_band(band_index):
+        band_indices = make_k_periodic_lookup_structure(k_grid)
 
         # reset taken_eigenvalues
         for k_index in k_grid:
@@ -409,7 +409,7 @@ def findBands(crystal, modes, scalar_product_calculator):
             
         if False:
             print "WARNING: No-op findBands"
-            return tBand(crystal, modes, band_indices)
+            return Band(crystal, modes, band_indices)
 
         for k_index in k_grid:
             k = k_grid[k_index]
@@ -417,7 +417,7 @@ def findBands(crystal, modes, scalar_product_calculator):
             guessed_eigenvalues = []
             close_eigenmodes = []
             for direction in all_dirs:
-                neighbor_set = findNeighbors(k_index, tuple(direction), 2, band_indices)
+                neighbor_set = find_neighbors(k_index, tuple(direction), 2, band_indices)
                 if len(neighbor_set) == 0:
                     pass
                 elif len(neighbor_set) == 1:
@@ -455,41 +455,41 @@ def findBands(crystal, modes, scalar_product_calculator):
             assert len(guessed_eigenvalues) > 0
             assert len(close_eigenmodes) > 0
 
-            index = findClosestAt(k_index, guessed_eigenvalues, close_eigenmodes)
+            index = find_closest_at(k_index, guessed_eigenvalues, close_eigenmodes)
             band_indices[k_index] = index
             taken_eigenvalues[k_index].add(index)
-        return tBand(crystal, modes, band_indices)
+        return Band(crystal, modes, band_indices)
 
-    return [findBand(i) for i in range(len(modes[0,0]))]
+    return [find_band(i) for i in range(len(modes[0,0]))]
 
 
 
     
 
-def visualizeBandsGnuplot(filename, crystal, bands):
+def visualize_bands_gnuplot(filename, crystal, bands):
     k_grid = crystal.KGrid
     out_file = file(filename, "w")
 
     def scale_eigenvalue(ev):
         return math.sqrt(abs(ev)) / (2 * math.pi)
 
-    def writePoint(key):
+    def write_point(key):
         spot = k_grid[key]
         out_file.write("%f\t%f\t%f\n" % (spot[0], spot[1], scale_eigenvalue(band[key][0])))
 
     for band in bands:
         for i,j in k_grid:
-            writePoint((i,j))
-            writePoint((i+1,j))
-            writePoint((i+1,j+1))
-            writePoint((i,j+1))
-            writePoint((i,j))
+            write_point((i,j))
+            write_point((i+1,j))
+            write_point((i+1,j+1))
+            write_point((i,j+1))
+            write_point((i,j))
             out_file.write("\n\n")
 
 
 
 
-def visualizeBandsVTK(filename, crystal, bands):
+def visualize_bands_vtk(filename, crystal, bands):
     import pyvtk
     k_grid = crystal.KGrid
 
@@ -528,11 +528,11 @@ def visualizeBandsVTK(filename, crystal, bands):
 
 
 
-def writeEigenvalueLocusPlot(filename, crystal, bands, k_points):
+def write_eigenvalue_locus_plot(filename, crystal, bands, k_points):
     locus_plot_file = file(filename, "w")
     for band in bands:
         for k in k_points:
-            closest_index = crystal.KGrid.findClosestGridPointIndex(k)
+            closest_index = crystal.KGrid.find_closest_grid_point_index(k)
             eigenvalue = band[closest_index][0]
             locus_plot_file.write("%f\t%f\n" % (eigenvalue.real, eigenvalue.imag))
         locus_plot_file.write("\n")
@@ -540,7 +540,7 @@ def writeEigenvalueLocusPlot(filename, crystal, bands, k_points):
 
   
 
-def writeBandDiagram(filename, crystal, bands, k_vectors):
+def write_band_diagram(filename, crystal, bands, k_vectors):
     def scale_eigenvalue(ev):
         return math.sqrt(abs(ev)) / (2 * math.pi)
 
@@ -561,7 +561,7 @@ def writeBandDiagram(filename, crystal, bands, k_vectors):
 
 
 
-def analyzeBandStructure(bands):
+def analyze_band_structure(bands):
     endpoints = []
     for idx, band in enumerate(bands):
         endpoints.append((band.MinAbsolute, "MIN", idx))
@@ -594,7 +594,7 @@ def analyzeBandStructure(bands):
 
 
 
-def normalizeModes(k_grid, modes, scalar_product_calculator):
+def normalize_modes(k_grid, modes, scalar_product_calculator):
     for k_index in k_grid:
         for index, (evalue, emode) in enumerate(modes[k_index]):
             norm_squared = scalar_product_calculator(emode, emode)
@@ -604,7 +604,7 @@ def normalizeModes(k_grid, modes, scalar_product_calculator):
 
 
 
-def periodicizeMeshFunction(mf, k, exponent = -1):
+def periodicize_mesh_function(mf, k, exponent = -1):
     vec = mf.vector()
     pvec = num.zeros(vec.shape, num.Complex)
     na = mf.numberAssignment()
@@ -618,15 +618,15 @@ def periodicizeMeshFunction(mf, k, exponent = -1):
 
 
 
-def periodicizeModes(crystal, modes, exponent = -1, verify = False):
+def periodicize_modes(crystal, modes, exponent = -1, verify = False):
     if crystal.HasInversionSymmetry:
-        pmodes = tools.tDependentDictionary(
-            tInvertedModeListLookerUpper(crystal.KGrid))
+        pmodes = tools.DependentDictionary(
+            InvertedModeListLookerUpper(crystal.KGrid))
     else:
         pmodes = {}
 
         
-    for k_index in crystal.KGrid.enlargeAtBothBoundaries():
+    for k_index in crystal.KGrid.enlarge_at_both_boundaries():
         k = crystal.KGrid[k_index]
         if crystal.HasInversionSymmetry and k[0] > 0:
             continue
@@ -634,13 +634,13 @@ def periodicizeModes(crystal, modes, exponent = -1, verify = False):
         pmodes[k_index] = []
         for evalue, emode in modes[k_index]:
             pmodes[k_index].append((evalue,
-                                    periodicizeMeshFunction(emode, k, exponent)))
+                                    periodicize_mesh_function(emode, k, exponent)))
 
     if verify:
-        for k_index in crystal.KGrid.enlargeAtBothBoundaries():
+        for k_index in crystal.KGrid.enlarge_at_both_boundaries():
             k = crystal.KGrid[k_index]
             for (evalue, emode), (pevalue, pemode) in zip(modes[k_index], pmodes[k_index]):
-                this_pmode = periodicizeMeshFunction(emode, k, exponent)
+                this_pmode = periodicize_mesh_function(emode, k, exponent)
                 assert op.norm_2((this_pmode - pemode).vector()) < 1e-10
 
     return pmodes
@@ -648,7 +648,7 @@ def periodicizeModes(crystal, modes, exponent = -1, verify = False):
 
 
 
-def visualizeGridFunction(multicell_grid, func_on_multicell_grid):
+def visualize_grid_function(multicell_grid, func_on_multicell_grid):
     offsets_and_mesh_functions = []
     for multicell_index in multicell_grid:
         R = multicell_grid[multicell_index]
@@ -660,10 +660,10 @@ def visualizeGridFunction(multicell_grid, func_on_multicell_grid):
 
 
 
-def generateSquareMeshWithRodCenter(lattice, inner_radius, coarsening_factor = 1, 
-                                    constraint_id = "floquet",
-                                    use_exact = True):
-    def needsRefinement( vert_origin, vert_destination, vert_apex, area ):
+def generate_square_mesh_with_rod_center(lattice, inner_radius, coarsening_factor = 1, 
+                                         constraint_id = "floquet",
+                                         use_exact = True):
+    def needs_refinement( vert_origin, vert_destination, vert_apex, area ):
         bary_x = ( vert_origin.x() + vert_destination.x() + vert_apex.x() ) / 3
         bary_y = ( vert_origin.y() + vert_destination.y() + vert_apex.y() ) / 3
         
@@ -680,13 +680,13 @@ def generateSquareMeshWithRodCenter(lattice, inner_radius, coarsening_factor = 1
         fempy.geometry.getCircle(inner_radius, use_exact), None)]
 
     return fempy.mesh.tTwoDimensionalMesh(
-        geometry, refinement_func = needsRefinement), boundary
+        geometry, refinement_func = needs_refinement), boundary
 
 
 
 
-def unifyPhases(modes):
-    def findAbsMax(mesh_funcs):
+def unify_phases(modes):
+    def find_abs_max(mesh_funcs):
         max_val = 0
         max_idx = None
 
@@ -703,7 +703,7 @@ def unifyPhases(modes):
            for key, modelist in modes.iteritems()
            for mode in modelist
            ]
-    max_i = findAbsMax(mfs)
+    max_i = find_abs_max(mfs)
     for key, modelist in modes.iteritems():
         for mode in modelist:
             mf = mode[1]
