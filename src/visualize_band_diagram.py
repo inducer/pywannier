@@ -9,9 +9,9 @@ import math, cmath
 
 lowest_functions = []
 
-class t1DProblem:
+class Problem1D:
     def __init__(self):
-        self.Lattice = pc.tBravaisLattice([num.array([1])])
+        self.Lattice = pc.BravaisLattice([num.array([1])])
         self.Mesh = fempy.mesh.tOneDimensionalMesh(0, 1, 40, "floquet_l", "floquet_r")
         self.LeftNode = fempy.solver.getNodesWithTrackingId(self.Mesh, "floquet_l")[0]
         self.RightNode = fempy.solver.getNodesWithTrackingId(self.Mesh, "floquet_r")[0]
@@ -29,11 +29,11 @@ class t1DProblem:
         nodes.sort(lambda n1, n2: cmp(n1.Coordinates[0], n2.Coordinates[0]))
         self.CenterNode = nodes[len(nodes)/2]
 
-    def kTrack(self):
+    def k_track(self):
         rl = self.Lattice.ReciprocalLattice
         return [0.001*rl[0], 0.999*rl[0]]
 
-    def getConditionNumber(self, k):
+    def get_condition_number(self, k):
         mm = num.matrixmultiply
         a = self.EigenSolver.setupConstraints(
             {self.RightNode: (0, [(cmath.exp(1j*k[0]), self.LeftNode)])})
@@ -46,7 +46,7 @@ class t1DProblem:
         total_m = mm(a, mm(m, num.hermite(a)))
         return op.spectral_condition_number(total_s), op.spectral_condition_number(total_s, 1)
 
-    def getEigenvalues(self, k):
+    def get_eigenvalues(self, k):
         rl = self.Lattice.ReciprocalLattice
 
         print "computing for k = ",k
@@ -67,28 +67,28 @@ class t1DProblem:
         lowest_functions.append(lowest_func/uniphase)
         return [evalue for evalue, em in pairs]
     
-class t2DProblem:
+class Problem2D:
     def __init__(self):
-        self.Lattice = pc.tBravaisLattice([num.array([1,0]), num.array([0, 1])])
-        epsilon = pc.tCircularFunctionRemapper(pc.tStepFunction(1, 0.18, 1.)) # 11.56
-        self.Mesh, boundary = pc.generateSquareMeshWithRodCenter(
+        self.Lattice = pc.BravaisLattice([num.array([1,0]), num.array([0, 1])])
+        epsilon = pc.CircularFunctionRemapper(pc.tStepFunction(1, 0.18, 1.)) # 11.56
+        self.Mesh, boundary = pc.generate_square_mesh_with_rod_center(
             self.Lattice, inner_radius = 0.18, coarsening_factor = 4)
 
-        self.PeriodicityNodes = pc.findPeriodicityNodes(self.Mesh, 
-                                                        boundary,
-                                                        self.Lattice.DirectLatticeBasis)
+        self.PeriodicityNodes = pc.find_periodicity_nodes(self.Mesh, 
+                                                          boundary,
+                                                          self.Lattice.DirectLatticeBasis)
         self.EigenSolver = fempy.solver.tLaplacianEigenproblemSolver(
             self.Mesh, constrained_nodes = self.PeriodicityNodes,
             g = epsilon, typecode = num.Complex)
 
-    def kTrack(self):
+    def k_track(self):
         rl = self.Lattice.ReciprocalLattice
         return [0.01*rl[0],
                 0.49*rl[0],
                 0.49*(rl[0]+rl[1]),
                 0.01*(rl[0]+rl[1])]
 
-    def getEigenvalues(self, k):
+    def get_eigenvalues(self, k):
         self.EigenSolver.setupConstraints(
             pc.getFloquetConstraints(self.PeriodicityNodes, k))
 
@@ -99,8 +99,8 @@ class t2DProblem:
         pairs.sort(lambda (e1, m1), (e2, m2): cmp(abs(e1), abs(e2)))
         return [evalue for evalue, em in pairs]
 
-problem = t2DProblem()
-k_track = tools.interpolateVectorList(problem.kTrack(), 49)
+problem = Problem1D()
+k_track = tools.interpolate_vector_list(problem.k_track(), 49)
 
 def scale_eigenvalue(ev):
     return math.sqrt(abs(ev)) / (2 * math.pi)
@@ -109,12 +109,12 @@ if raw_input("write condition file? [n]") == "y":
     condfile = file(",,condition_k.data", "w")
     effcondfile = file(",,eff_condition_k.data", "w")
     for j,k in enumerate(k_track):
-        cond, effcond = problem.getConditionNumber(k)
+        cond, effcond = problem.get_condition_number(k)
         condfile.write("%f\t%f\n" % (k_track[j][0], cond))
         effcondfile.write("%f\t%f\n" % (k_track[j][0], effcond))
 
 bdfile = file(",,band_diagram.data", "w")
-evlists = [problem.getEigenvalues(k) for k in k_track]
+evlists = [problem.get_eigenvalues(k) for k in k_track]
 for i in range(len(evlists[0])):
     for j in range(len(k_track)):
         bdfile.write("%f\t%f\n" % (j, scale_eigenvalue(evlists[j][i])))

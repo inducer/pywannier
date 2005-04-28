@@ -368,7 +368,18 @@ class KSpaceDirectionalWeights:
 
 
 
-# Marzari-relevant functionality ----------------------------------------------
+# Berghold minimization -------------------------------------------------------
+class BergholdSpreadMinimizer:
+    def __init__(self, crystal, spc, debug_mode = True, interactivity_level = 0):
+        self.Crystal = crystal
+        self.ScalarProductCalculator = spc
+        self.DebugMode = debug_mode
+        self.InteractivityLevel = interactivity_level
+
+    def minimize_spread(self, pbands, mix_matrix):
+        pass
+
+# Marzari minimization --------------------------------------------------------
 class MarzariSpreadMinimizer:
     def __init__(self, crystal, spc, debug_mode = True, interactivity_level = 0):
         self.Crystal = crystal
@@ -1088,6 +1099,9 @@ class MarzariSpreadMinimizer:
                             step = 0.5/(4*sum(self.KWeights.KWeights)),
                             sp = sp,
                             log_filenames = (",,cg_target_log.data", ",,cg_step_log.data"))
+
+
+
 
 def compute_mixed_bands(crystal, bands, mix_matrix):
     # WARNING! Don't be tempted to insert symmetry code in here, since

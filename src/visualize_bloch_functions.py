@@ -22,15 +22,15 @@ import photonic_crystal as pc
 
 
 
-job = fempy.stopwatch.tJob("loading")
+job = fempy.stopwatch.Job("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
 crystal = crystals[0]
 
-multicell_grid = tools.tFiniteGrid(origin = num.array([0.,0.], num.Float),
-                                   grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                   limits = [(-2,2)] * 2)
+multicell_grid = tools.FiniteGrid(origin = num.array([0.,0.], num.Float),
+                                  grid_vectors = crystal.Lattice.DirectLatticeBasis,
+                                  limits = [(-2,2)] * 2)
 
 dlb = crystal.Lattice.DirectLatticeBasis
 for band_index, band in enumerate(crystal.Bands):
@@ -60,7 +60,7 @@ for band_index, band in enumerate(crystal.Bands):
                     else:
                         my_mode = periodic_mode
                     f_on_grid[multicell_index] = my_mode.imaginary
-                pc.visualizeGridFunction(multicell_grid, f_on_grid)
+                pc.visualize_grid_function(multicell_grid, f_on_grid)
 
         if break_k:
             break

@@ -44,7 +44,8 @@ def compute_eigenmodes(crystal, sigma):
         eigensolver.setupConstraints(pc.get_floquet_constraints(periodicity_nodes, k))
         crystal.Modes[k_index] = eigensolver.solve(sigma,
                                                    tolerance = 1e-10,
-                                                   number_of_eigenvalues = 10)
+                                                   number_of_eigenvalues = 10,
+                                                   allow_direct=min(num.absolute(k)) > 1e-5)
         for ev, em in crystal.Modes[k_index]:
             assert em.numberAssignment() is crystal.NodeNumberAssignment
 
@@ -116,8 +117,7 @@ def compute_eigenmodes_for_standard_unit_cell(lattice, epsilon, inner_radius,
 
 def run():
     fempy.stopwatch.HIDDEN_JOBS.append("arpack rci")
-    fempy.stopwatch.HIDDEN_JOBS.append("linear combination constraints")
-    fempy.stopwatch.HIDDEN_JOBS.append("shift matrix")
+    #fempy.stopwatch.HIDDEN_JOBS.append("constrained matrices")
 
     a = 1.
     inner_radius = 0.18 
@@ -132,7 +132,7 @@ def run():
                                                          a*inner_radius,
                                                          refine_steps=0, # 4
                                                          coarsening_factor=1,
-                                                         k_grid_points=8)
+                                                         k_grid_points=7)
 
     job = fempy.stopwatch.Job("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)

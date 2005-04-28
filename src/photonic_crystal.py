@@ -505,7 +505,7 @@ def visualize_bands_vtk(filename, crystal, bands):
         node_lookup[i,j] = len(nodes)
         nodes.append((spot[0], spot[1], 0))
 
-    for i,j in k_grid.chopUpperBoundary():
+    for i,j in k_grid.chop_upper_boundary():
         quads.append((
             node_lookup[i,j],
             node_lookup[i+1,j],
