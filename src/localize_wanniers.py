@@ -27,32 +27,35 @@ import photonic_crystal as pc
 
 
 class DictionaryOfMatrices(tools.DictionaryOfArithmeticTypes):
+    def _get_empty_self(self):
+        return DictionaryOfMatrices()
+
     def conjugate():
-        result = DictionaryOfMatrices()
+        result = self._get_empty_self()
         for key in self:
             result[key] = num.conjugate(self[key])
         return result
     
     def _hermite(self):
-        result = DictionaryOfMatrices()
+        result = self._get_empty_self()
         for key in self:
             result[key] = self[key].H
         return result
         
     def _transpose(self):
-        result = DictionaryOfMatrices()
+        result = self._get_empty_self()
         for key in self:
             result[key] = self[key].T
         return result
         
     def _getreal():
-        result = DictionaryOfMatrices()
+        result = self._get_empty_self()
         for key in self:
             result[key] = self[key].real
         return result
 
     def _getimaginary():
-        result = DictionaryOfMatrices()
+        result = self._get_empty_self()
         for key in self:
             result[key] = self[key].real
         return result
@@ -376,8 +379,59 @@ class BergholdSpreadMinimizer:
         self.DebugMode = debug_mode
         self.InteractivityLevel = interactivity_level
 
-    def minimize_spread(self, pbands, mix_matrix):
+    def compute_spread_functional(self, weights, scalar_products):
+
         pass
+
+    def compute_gradient(self, mix_matrix):
+        pass
+
+    def minimize_spread(self, bands, pbands, mix_matrix):
+        n = len(bands)
+        assert len(pbands) == n
+
+        spc = self.ScalarProductCalculator
+
+        # find geometric factors
+        h = num.array(self.Crystal.Lattice.DirectLatticeBasis).T
+        miller_indices = [num.array([1,0]), num.array([0,1])]
+        k_directions = [2*math.pi*(h <<num.solve>> miller_index)
+                        for miller_index in miller_indices]
+        # FIXME understand eq. (11)
+        weights = [1, 1]
+
+        exp_ikr_mf = []
+        for k in k_directions:
+            exp_ikr_mf.append(pc.get_exp_ikr_mesh_function(
+                self.Crystal.Mesh,
+                self.Crystal.NodeNumberAssignment,
+                k))
+
+        # find Gamma point
+        gamma_index = self.Crystal.KGrid.find_closest_grid_point_index(
+            num.array([0,0]))
+        assert op.norm_2(self.Crystal.KGrid[gamma_index]) < 1e-10
+
+        # compute scalar products
+        raw_scalar_products = DictionaryOfMatrices()
+        for ki, k in enumerate(k_directions):
+            exp_ikr = exp_ikr_mf[ki]
+
+            z = num.zeros((n,n), num.Complex)
+            for i in range(n):
+                for j in range(n):
+                    z[j,i] = z[i,j] = spc(exp_ikr * bands[j][gamma_index][1], 
+                                          bands[i][gamma_index][1])
+                    assert abs(spc(exp_ikr * bands[i][gamma_index][1], 
+                                   bands[j][gamma_index][1])
+                               - z[i,j]) < 1e-3
+
+        mix_matrix = num.identity(n, num.Complex)
+
+        raise NotImplementedError
+            
+
+
 
 # Marzari minimization --------------------------------------------------------
 class MarzariSpreadMinimizer:
@@ -878,7 +932,7 @@ class MarzariSpreadMinimizer:
             print "od after pre", self.omega_od(sps_post)
         return new_mix_matrix
 
-    def minimize_spread(self, pbands, mix_matrix):
+    def minimize_spread(self, bands, pbands, mix_matrix):
         if self.DebugMode:
             for ii in self.Crystal.KGrid:
                 assert toybox.unitariety_error(mix_matrix[ii]) < 5e-3
@@ -1068,7 +1122,7 @@ class MarzariSpreadMinimizer:
             pass
         return mix_matrix
 
-    def minimize_spread_2(self, pbands, mix_matrix):
+    def minimize_spread_2(self, bands, pbands, mix_matrix):
         if self.DebugMode:
             for ii in self.Crystal.KGrid:
                 assert toybox.unitariety_error(mix_matrix[ii]) < 5e-3
@@ -1285,8 +1339,10 @@ def run():
     mix_matrix = guess_initial_mix_matrix(crystal, bands, sp)
     job.done()
 
-    minimizer = MarzariSpreadMinimizer(crystal, sp, debug_mode, interactivity_level)
-    mix_matrix = minimizer.minimize_spread(pbands, mix_matrix)
+    minimizer_class = BergholdSpreadMinimizer
+    #minimizer_class = MarzariSpreadMinimizer
+    minimizer = minimizer_class(crystal, sp, debug_mode, interactivity_level)
+    mix_matrix = minimizer.minimize_spread(bands, pbands, mix_matrix)
 
     mixed_bands = compute_mixed_bands(crystal, bands, mix_matrix)
 

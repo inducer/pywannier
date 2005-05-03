@@ -604,7 +604,21 @@ def normalize_modes(k_grid, modes, scalar_product_calculator):
 
 
 
-def periodicize_mesh_function(mf, k, exponent = -1):
+def get_exp_ikr_mesh_function(mesh, number_assignment, k, exponent=1):
+    mf = fempy.mesh_function.tMeshFunction(mesh, number_assignment,
+                                            typecode=num.Complex)
+    vec = mf.vector()
+    na = number_assignment
+    exponent *= 1j
+
+    for node in mesh.dofManager():
+        vec[na[node]] = cmath.exp(exponent * k * node.Coordinates)
+    return mf
+
+
+
+
+def periodicize_mesh_function(mf, k, exponent=-1):
     vec = mf.vector()
     pvec = num.zeros(vec.shape, num.Complex)
     na = mf.numberAssignment()
@@ -618,7 +632,7 @@ def periodicize_mesh_function(mf, k, exponent = -1):
 
 
 
-def periodicize_modes(crystal, modes, exponent = -1, verify = False):
+def periodicize_modes(crystal, modes, exponent=-1, verify=False):
     if crystal.HasInversionSymmetry:
         pmodes = tools.DependentDictionary(
             InvertedModeListLookerUpper(crystal.KGrid))
@@ -628,13 +642,16 @@ def periodicize_modes(crystal, modes, exponent = -1, verify = False):
         
     for k_index in crystal.KGrid.enlarge_at_both_boundaries():
         k = crystal.KGrid[k_index]
+
+        exp_ikr = get_exp_ikr_mesh_function(crystal.Mesh,
+                                            crystal.NodeNumberAssignment,
+                                            k, exponent)
         if crystal.HasInversionSymmetry and k[0] > 0:
             continue
 
         pmodes[k_index] = []
         for evalue, emode in modes[k_index]:
-            pmodes[k_index].append((evalue,
-                                    periodicize_mesh_function(emode, k, exponent)))
+            pmodes[k_index].append((evalue, exp_ikr * emode))
 
     if verify:
         for k_index in crystal.KGrid.enlarge_at_both_boundaries():

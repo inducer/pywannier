@@ -12,8 +12,7 @@ def run():
         spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
                                                            crystal.MassMatrix)
         job = fempy.stopwatch.Job("calculating periodic modes")
-        crystal.PeriodicModes = pc.periodicize_modes(crystal, 
-                                                    crystal.Modes)
+        crystal.PeriodicModes = pc.periodicize_modes(crystal, crystal.Modes)
         job.done()
 
         job = fempy.stopwatch.Job("unifying phases: bloch modes")
