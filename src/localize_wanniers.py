@@ -131,118 +131,8 @@ def symmetric_part(matrix):
 def skew_symmetric_part(matrix):
     return 0.5*(matrix-matrix.T)
 
-class SimpleArg:
-    def __init__(self):
-        pass
-
-    def reset(self):
-        pass
-
-    def copy(self):
-        return self
-
-    def __call__(self, z, association = None):
-        return cmath.log(z).imag
-
-class StatsCountingArg:
-    def __init__(self, k_grid, dir_weights):
-        self.KGrid = k_grid
-        self.KWeights = dir_weights
-        self._reset()
-
-    def _reset(self):
-        self.Applications = 0
-        self.Violations = 0
-        self.ViolationMap = tools.DictionaryWithDefault(
-            lambda x: tools.DictionaryWithDefault(
-            lambda x: 0))
-
-    def reset(self):
-        if self.Applications:
-            print "violations in past term %d out of %d (%f%%)" % \
-                  (self.Violations, self.Applications, 
-                   100. * self.Violations / self.Applications)
-
-            vios_drawn = 0
-            for n, vio_map in self.ViolationMap.iteritems():
-                statsf = file(",,violations-%d.data" % n, "w")
-                for k_index in self.KGrid:
-                    for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
-                        where = self.KGrid[k_index] + self.KWeights.KGridIncrements[kgii_index] * 0.2
-                        vios_here = self.ViolationMap[n][k_index, kgii]
-                        vios_drawn += vios_here
-                        statsf.write("%f\t%f\t%d\n" %(where[0], where[1], vios_here))
-                statsf.close()
-            assert vios_drawn == self.Violations
-            raw_input("violation maps drawn [enter]:")
-        self._reset()
-
-
-    def copy(self):
-        return self
-
-    def __call__(self, z, association = None):
-        result = cmath.log(z).imag
-        self.Applications += 1
-        if abs(result/math.pi) > 0.5:
-            self.Violations += 1
-            k_index, kgii, n = association
-            self.ViolationMap[n][k_index, kgii] += 1
-        return result
-
-class BoinkArg:
-    def __init__(self, last_value_dict = {}):
-        self.LastValue = last_value_dict.copy()
-
-    def reset(self):
-        self.LastValue = {}
-
-    def copy(self):
-        return BoinkArg(self.LastValue)
-
-    def __call__(self, z, association = None):
-        result = cmath.log(z).imag
-
-        use_randadd = abs(result/math.pi) > 0.5
-        have_randadd = association in self.LastValue
-        #assert not (not use_randadd and have_randadd)
-        if use_randadd:
-            if have_randadd:
-                randadd = self.LastValue[association]
-            else:
-                randadd = random.randint(-1,1) * 2 * math.pi
-                self.LastValue[association] = randadd
-            return result + randadd
-        else:
-            return result
-
-class ContinuityAwareArg:
-    def __init__(self, last_value_dict = {}):
-        self.LastValue = last_value_dict.copy()
-
-    def copy(self):
-        return ContinuityAwareArg(self.LastValue)
-
-    def __call__(self, z, association = None):
-        return cmath.log(z).imag
-        try:
-            last_v = self.LastValue[association]
-            new_result = cmath.log(z).imag
-            last_band = math.floor((last_v+math.pi) / (2*math.pi))
-            last_band_center = last_band * 2 * math.pi
-
-            centers = [last_band_center, last_band_center + 2*math.pi,
-                       last_band_center - 2*math.pi]
-            least_i = tools.argmin(centers,
-                                   lambda center: abs(center+new_result - last_v))
-            result = centers[least_i] + new_result
-            self.LastValue[association] = result
-            return result
-
-        except KeyError:
-            result = cmath.log(z).imag
-            self.LastValue[association] = result
-            return result
+def arg(z):
+    return cmath.log(z).imag
 
 def minimize_by_gradient_descent(x, f, grad, x_plus_alpha_grad, step):
     observer = iteration.make_observer(min_change = 1e-3, max_unchanged = 3)
@@ -496,7 +386,7 @@ class MarzariSpreadMinimizer:
         new_scalar_products = {}
         for k_index in self.Crystal.KGrid:
             if self.DebugMode:
-                assert toybox.unitariety_error(mix_matrix[k_index]) < 1e-8
+                assert toybox.unitariety_error(mix_matrix[k_index]) < 1e-4
 
             for kgii in self.KWeights.HalfTheKGridIndexIncrements:
                 added_tuple = self.Crystal.KGrid.reduce_periodically(
@@ -530,14 +420,14 @@ class MarzariSpreadMinimizer:
                     for i, z in enumerate(m_diagonal):
                         arg = cmath.log(m[i,i]).imag
                         magfiles[i].write("%f\t%f\t%f\n" %(where[0], where[1], abs(m[i,i])))
-                        argfiles[i].write("%f\t%f\t%f\n" %(where[0], where[1], arg))
+                        argfiles[i].write("%f\t%f\t%f\n" %(where[0], where[1]))
             for af in argfiles:
                 af.close()
             for mf in magfiles:
                 mf.close()
             raw_input("[magnitude/argument plot ready]")
 
-    def wannier_centers(self, n_bands, scalar_products, arg):
+    def wannier_centers(self, n_bands, scalar_products):
         wannier_centers = []
         for n in range(n_bands):
             result = num.zeros((2,), num.Float)
@@ -548,14 +438,13 @@ class MarzariSpreadMinimizer:
 
                     result -= self.KWeights.KWeights[kgii_index] \
                               * self.KWeights.KGridIncrements[kgii_index] \
-                              * arg(scalar_products[k_index, kgii][n,n], 
-                                    (k_index, kgii, n))
+                              * arg(scalar_products[k_index, kgii][n,n])
             result /= self.Crystal.KGrid.grid_point_count()
             wannier_centers.append(result)
         return wannier_centers
 
-    def spread_functional(self, n_bands, scalar_products, arg):
-        wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+    def spread_functional(self, n_bands, scalar_products):
+        wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         total_spread_f = 0
         for n in range(n_bands):
@@ -567,8 +456,7 @@ class MarzariSpreadMinimizer:
 
                     mean_r_squared += self.KWeights.KWeights[kgii_index] \
                                       * (1 - abs(scalar_products[k_index, kgii][n,n])**2 
-                                         + arg(scalar_products[k_index, kgii][n,n], 
-                                               (k_index, kgii, n))**2)
+                                         + arg(scalar_products[k_index, kgii][n,n])**2)
             mean_r_squared /= self.Crystal.KGrid.grid_point_count()
             total_spread_f += mean_r_squared - op.norm_2_squared(wannier_centers[n])
         return total_spread_f
@@ -630,9 +518,9 @@ class MarzariSpreadMinimizer:
                            * (frobenius_norm_off_diagonal_squared(scalar_products[k_index, kgii]))
         return omega_od / self.Crystal.KGrid.grid_point_count()
 
-    def omega_d(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def omega_d(self, n_bands, scalar_products, wannier_centers = None):
         if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         omega_d = 0.
         for n in range(n_bands):
@@ -644,19 +532,18 @@ class MarzariSpreadMinimizer:
                     b = self.KWeights.KGridIncrements[kgii_index]
 
                     omega_d += self.KWeights.KWeights[kgii_index] \
-                               * (arg(scalar_products[k_index,kgii][n,n], 
-                                      (k_index, kgii, n)) \
+                               * (arg(scalar_products[k_index,kgii][n,n]) \
                                   + (wannier_centers[n]*b))**2
         return omega_d / self.Crystal.KGrid.grid_point_count()
 
-    def spread_functional_via_omegas(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def spread_functional_via_omegas(self, n_bands, scalar_products, wannier_centers = None):
         return self.omega_i(n_bands, scalar_products) + \
                self.omega_od(scalar_products) + \
-               self.omega_d(n_bands, scalar_products, arg, wannier_centers)
+               self.omega_d(n_bands, scalar_products, wannier_centers)
 
-    def spread_functional_gradient(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def spread_functional_gradient(self, n_bands, scalar_products, wannier_centers = None):
         if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         gradient = DictionaryOfMatrices()
         for k_index in self.Crystal.KGrid:
@@ -694,7 +581,7 @@ class MarzariSpreadMinimizer:
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
-                    q[n] = arg(m_diagonal[n], (k_index, kgii, n))
+                    q[n] = arg(m_diagonal[n])
 
                 for n in range(n_bands):
                     q[n] += self.KWeights.KGridIncrements[kgii_index] \
@@ -714,10 +601,10 @@ class MarzariSpreadMinimizer:
             gradient[k_index] = result
         return gradient
 
-    def spread_functional_gradient_marzari_omega_od(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def spread_functional_gradient_marzari_omega_od(self, n_bands, scalar_products, wannier_centers = None):
         ### WRONG!!! DELETE ME!
         if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         gradient = DictionaryOfMatrices()
         for k_index in self.Crystal.KGrid:
@@ -745,9 +632,9 @@ class MarzariSpreadMinimizer:
         return gradient
         ### WRONG!!! DELETE ME!
 
-    def spread_functional_gradient_omega_od(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def spread_functional_gradient_omega_od(self, n_bands, scalar_products, wannier_centers = None):
         if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         gradient = DictionaryOfMatrices()
         for k_index in self.Crystal.KGrid:
@@ -775,9 +662,9 @@ class MarzariSpreadMinimizer:
             gradient[k_index] = result
         return gradient
 
-    def spread_functional_gradient_omega_d(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def spread_functional_gradient_omega_d(self, n_bands, scalar_products, wannier_centers = None):
         if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         gradient = DictionaryOfMatrices()
         for k_index in self.Crystal.KGrid:
@@ -821,10 +708,10 @@ class MarzariSpreadMinimizer:
             gradient[k_index] = result
         return gradient
 
-    def spread_functional_gradient_marzari_omega_d(self, n_bands, scalar_products, arg, wannier_centers = None):
+    def spread_functional_gradient_marzari_omega_d(self, n_bands, scalar_products, wannier_centers = None):
         ### WRONG!!! DELETE ME!
         if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products, arg)
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
         gradient = DictionaryOfMatrices()
         for k_index in self.Crystal.KGrid:
@@ -897,9 +784,8 @@ class MarzariSpreadMinimizer:
                 assert op.norm_frobenius(sps_direct[k_index, kgii]
                                          - sps_updated[k_index, kgii]) < 1e-13
 
-        arg = ContinuityAwareArg()
-        sf1 = self.spread_functional(len(pbands), sps_updated, arg.copy())
-        sf2 = self.spread_functional(len(pbands), sps_direct, arg.copy())
+        sf1 = self.spread_functional(len(pbands), sps_updated)
+        sf2 = self.spread_functional(len(pbands), sps_direct)
         assert abs(sf1-sf2) < 1e-10
 
         job.done()
@@ -945,27 +831,25 @@ class MarzariSpreadMinimizer:
         job.done()
 
         oi = self.omega_i(len(pbands), orig_sps)
-        arg = SimpleArg()
 
         observer = iteration.make_observer(min_change = 1e-3, max_unchanged = 3)
         observer.reset()
         try:
             while True:
-                arg.reset()
                 sps = self.update_offset_scalar_products(orig_sps, mix_matrix)
                 if self.DebugMode:
                     assert abs(oi - self.omega_i(len(pbands), sps)) < 1e-5
-                od, ood = self.omega_d(len(pbands), sps, arg), \
+                od, ood = self.omega_d(len(pbands), sps), \
                           self.omega_od(sps)
                 sf = oi+od+ood
                 print "spread_func:", sf, oi, od, ood
                 observer.add_data_point(sf)
 
-                gradient = self.spread_functional_gradient(len(pbands), sps, arg)
+                gradient = self.spread_functional_gradient(len(pbands), sps)
                 #gradient = makeRandomKDependentSkewHermitianMatrix(crystal, len(pbands), num.Complex)
 
                 if self.DebugMode:
-                    assert abs(self.spread_functional(len(pbands), sps, arg) - sf) < 1e-5
+                    assert abs(self.spread_functional(len(pbands), sps) - sf) < 1e-5
 
                 def testDerivs(x):
                     print_count = 4
@@ -1078,7 +962,7 @@ class MarzariSpreadMinimizer:
                     temp_mix_matrix = self.get_mix_matrix(mix_matrix, x, gradient)
                     temp_sps = self.update_offset_scalar_products(orig_sps, temp_mix_matrix)
 
-                    result = self.spread_functional(len(pbands), temp_sps, arg)
+                    result = self.spread_functional(len(pbands), temp_sps)
                     if self.DebugMode:
                         print x, result
                     return result
@@ -1087,20 +971,20 @@ class MarzariSpreadMinimizer:
                     temp_mix_matrix = self.get_mix_matrix(mix_matrix, x, gradient)
                     temp_sps = self.update_offset_scalar_products(orig_sps, temp_mix_matrix)
 
-                    marz_grad_od = self.spread_functional_gradient_marzari_omega_o_d(len(pbands), temp_sps, arg)
-                    marz_grad_d = self.spread_functional_gradient_marzari_omega_d(len(pbands), temp_sps, arg)
+                    marz_grad_od = self.spread_functional_gradient_marzari_omega_od(len(pbands), temp_sps)
+                    marz_grad_d = self.spread_functional_gradient_marzari_omega_d(len(pbands), temp_sps)
                     marz_sp_od = k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, marz_grad_od, gradient)
                     marz_sp_d = k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, marz_grad_d, gradient)
                     marz_sp = marz_sp_od + marz_sp_d
 
-                    new_grad_od = self.spread_functional_gradient_omega_od(len(pbands), temp_sps, arg)
-                    new_grad_d = self.spread_functional_gradient_omega_d(len(pbands), temp_sps, arg)
+                    new_grad_od = self.spread_functional_gradient_omega_od(len(pbands), temp_sps)
+                    new_grad_d = self.spread_functional_gradient_omega_d(len(pbands), temp_sps)
                     sp_od = k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, new_grad_od, gradient)
                     sp_d = k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, new_grad_d, gradient)
                     sp = sp_od + sp_d
 
                     oi_here = self.omega_i(len(pbands), temp_sps)
-                    od = self.omega_d(len(pbands), temp_sps, arg)
+                    od = self.omega_d(len(pbands), temp_sps)
                     ood = self.omega_od(temp_sps)
                     return oi_here+od+ood, sp, marz_sp
                            
@@ -1134,16 +1018,14 @@ class MarzariSpreadMinimizer:
         self.check_initial_scalar_products(pbands, orig_sps)
         job.done()
 
-        arg = SimpleArg()
-
         def f(mix_matrix):
             temp_sps = self.update_offset_scalar_products(orig_sps, mix_matrix)
-            result = self.spread_functional(len(pbands), temp_sps, arg)
+            result = self.spread_functional(len(pbands), temp_sps)
             return result
 
         def grad(mix_matrix):
             temp_sps = self.update_offset_scalar_products(orig_sps, mix_matrix)
-            return self.spread_functional_gradient(len(pbands), temp_sps, arg)
+            return self.spread_functional_gradient(len(pbands), temp_sps)
 
         def sp(m1, m2):
             return k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, m1, m2)
@@ -1236,9 +1118,10 @@ def average_phase_deviation(multicell_grid, func_on_multicell_grid):
 def generate_random_gaussians(crystal, typecode):
     dlb = crystal.Lattice.DirectLatticeBasis
     while True:
-        center_coords = [random.uniform(0.1, 0.9) for i in range(len(dlb))]
-        center = tools.linear_combination(center_coords, dlb) \
-                 - 0.5*tools.general_sum(dlb)
+        i = random.randint(0,len(dlb)-1)
+        center_coords = num.zeros((len(dlb),), num.Float)
+        center_coords[i] = random.uniform(-0.4, 0.4)
+        center = dlb[i] * tools.linear_combination(center_coords, dlb)
 
         sigma = num.zeros((len(dlb), len(dlb)), num.Float)
         for i in range(len(dlb)):
@@ -1310,7 +1193,7 @@ def run():
     debug_mode = raw_input("enable debug mode? [n]") == "y"
     ilevel_str = raw_input("interactivity level? [0]")
     interactivity_level = (ilevel_str) and int(ilevel_str) or 0
-    random.seed(2000)
+    random.seed(200)
 
     job = fempy.stopwatch.Job("loading")
     crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
@@ -1339,8 +1222,8 @@ def run():
     mix_matrix = guess_initial_mix_matrix(crystal, bands, sp)
     job.done()
 
-    minimizer_class = BergholdSpreadMinimizer
-    #minimizer_class = MarzariSpreadMinimizer
+    #minimizer_class = BergholdSpreadMinimizer
+    minimizer_class = MarzariSpreadMinimizer
     minimizer = minimizer_class(crystal, sp, debug_mode, interactivity_level)
     mix_matrix = minimizer.minimize_spread(bands, pbands, mix_matrix)
 
