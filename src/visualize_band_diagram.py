@@ -70,7 +70,7 @@ class Problem1D:
 class Problem2D:
     def __init__(self):
         self.Lattice = pc.BravaisLattice([num.array([1,0]), num.array([0, 1])])
-        epsilon = pc.CircularFunctionRemapper(pc.tStepFunction(1, 0.18, 1.)) # 11.56
+        epsilon = pc.CircularFunctionRemapper(pc.StepFunction(11.56, 0.18, 1.)) # 11.56
         self.Mesh, boundary = pc.generate_square_mesh_with_rod_center(
             self.Lattice, inner_radius = 0.18, coarsening_factor = 4)
 
@@ -90,7 +90,7 @@ class Problem2D:
 
     def get_eigenvalues(self, k):
         self.EigenSolver.setupConstraints(
-            pc.getFloquetConstraints(self.PeriodicityNodes, k))
+            pc.get_floquet_constraints(self.PeriodicityNodes, k))
 
         print "computing for k = ",k
 
@@ -99,7 +99,7 @@ class Problem2D:
         pairs.sort(lambda (e1, m1), (e2, m2): cmp(abs(e1), abs(e2)))
         return [evalue for evalue, em in pairs]
 
-problem = Problem1D()
+problem = Problem2D()
 k_track = tools.interpolate_vector_list(problem.k_track(), 49)
 
 def scale_eigenvalue(ev):

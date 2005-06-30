@@ -3,10 +3,10 @@
 set grid
 plot \
  ",,f0.data" title "o_d", \
- ",,f5.data" using 1:($2*1e-2) title "grad_d" with lines, \
- ",,f0.data.deriv" using 1:($2*1e-2) title "grad_d real" with lines, \
+ ",,f2.data" using 1:($2*1e-2) title "0.1 grad_d New" with lines, \
+ ",,f4.data" using 1:(-$2*1e-2) title "0.1 grad_d Marzari", \
+ ",,f0.data.deriv" using 1:($2*1e-2) title "0.1 grad_d FinDiff" with lines, \
  ",,f1.data" title "o_od", \
- ",,f4.data" using 1:($2*1e-1) title "grad_od" with lines, \
- ",,f1.data.deriv" using 1:($2*1e-1) title "grad_od real" with lines,\
- ",,f3.data" using 1:($2*1e-2) title "grad", \
- ",,f2.data" title "o_d+o_od"
+ ",,f3.data" using 1:($2*1e-1) title "0.1 grad_od New" with lines, \
+ ",,f5.data" using 1:(-$2*1e-1) title "0.1 grad_od Marzari", \
+ ",,f1.data.deriv" using 1:($2*1e-1) title "0.1 grad_od FinDiff" with lines

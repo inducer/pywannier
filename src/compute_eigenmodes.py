@@ -117,7 +117,7 @@ def compute_eigenmodes_for_standard_unit_cell(lattice, epsilon, inner_radius,
 
 def run():
     fempy.stopwatch.HIDDEN_JOBS.append("arpack rci")
-    #fempy.stopwatch.HIDDEN_JOBS.append("constrained matrices")
+    fempy.stopwatch.HIDDEN_JOBS.append("constrained matrices")
 
     a = 1.
     inner_radius = 0.18 

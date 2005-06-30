@@ -8,38 +8,38 @@ import photonic_crystal as pc
 import cPickle as pickle
 
 grid_vectors = [num.array([1,0]), num.array([0, 1])]
-lattice = pc.tBravaisLattice(grid_vectors)
+lattice = pc.BravaisLattice(grid_vectors)
 
 rl = lattice.ReciprocalLattice
-k_grid  = tools.makeCellCenteredGrid(-0.5*(rl[0]+rl[1]), rl,
-                                     [(0, 20)] * 2)
+k_grid  = tools.make_cell_centered_grid(-0.5*(rl[0]+rl[1]), rl,
+                                        [(0, 20)] * 2)
 
-job = fempy.stopwatch.tJob("geometry")
-mesh, boundary = pc.generateSquareMeshWithRodCenter(lattice, 0.18)
+job = fempy.stopwatch.Job("geometry")
+mesh, boundary = pc.generate_square_mesh_with_rod_center(lattice, 0.18)
 job.done()
 
-periodicity_nodes = pc.findPeriodicityNodes(mesh, boundary, 
-                                            lattice.DirectLatticeBasis)
+periodicity_nodes = pc.find_periodicity_nodes(mesh, boundary, 
+                                              lattice.DirectLatticeBasis)
 
 unconstrained_nodes = [node for node in mesh.dofManager() if node not in periodicity_nodes]
 number_assignment = fempy.element.assignNodeNumbers(unconstrained_nodes)
 complete_number_assignment = fempy.element.assignNodeNumbers(periodicity_nodes, 
                                                              number_assignment)
-crystal = pc.tPhotonicCrystal(lattice,
-                              mesh,
-                              boundary,
-                              k_grid,
-                              has_inversion_symmetry=True,
-                              epsilon=pc.tConstantFunction(1)) 
+crystal = pc.PhotonicCrystal(lattice,
+                             mesh,
+                             boundary,
+                             k_grid,
+                             has_inversion_symmetry=True,
+                             epsilon=pc.ConstantFunction(1)) 
 
-crystal.Modes = tools.tDependentDictionary(pc.tReducedBrillouinModeListLookerUpper(k_grid))
+crystal.Modes = tools.DependentDictionary(pc.ReducedBrillouinModeListLookerUpper(k_grid))
 crystal.MassMatrix = fempy.solver.buildMassMatrix(mesh, complete_number_assignment,
                                                   crystal.Epsilon, num.Complex)
 crystal.NodeNumberAssignment = complete_number_assignment
 
 n_bands = 10
 
-crystal.Modes = tools.tDependentDictionary(pc.tReducedBrillouinModeListLookerUpper(k_grid))
+crystal.Modes = tools.DependentDictionary(pc.ReducedBrillouinModeListLookerUpper(k_grid))
 
 for k_index in k_grid:
     k = k_grid[k_index]
@@ -48,7 +48,7 @@ for k_index in k_grid:
     print "computing for k =",k
 
     eigenvalues_here = []
-    for i,j in tools.generateAllIntegerTuplesBelow(5, 2):
+    for i,j in tools.generate_all_integer_tuples_below(5, 2):
         lambda_ = (2*math.pi*i+k_grid[k_index][0])**2 + \
                   (2*math.pi*j+k_grid[k_index][1])**2 + 0.j
         eigenvalues_here.append((lambda_, (i,j)))
@@ -67,6 +67,6 @@ for k_index in k_grid:
         modes_here.append((ev, mode))
     crystal.Modes[k_index] = modes_here
 
-job = fempy.stopwatch.tJob("saving")
+job = fempy.stopwatch.Job("saving")
 pickle.dump([crystal], file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)
 job.done()

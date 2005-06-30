@@ -35,19 +35,19 @@ class DictionaryOfMatrices(tools.DictionaryOfArithmeticTypes):
         for key in self:
             result[key] = num.conjugate(self[key])
         return result
-    
+
     def _hermite(self):
         result = self._get_empty_self()
         for key in self:
             result[key] = self[key].H
         return result
-        
+
     def _transpose(self):
         result = self._get_empty_self()
         for key in self:
             result[key] = self[key].T
         return result
-        
+
     def _getreal():
         result = self._get_empty_self()
         for key in self:
@@ -163,7 +163,7 @@ def minimize_by_cg(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None
     # Polak-Ribi`ere with implicit restart
 
     d = last_r = -grad(x)
-    observer = iteration.make_observer(min_change = 1e-5, max_unchanged = 3)
+    observer = iteration.make_observer(min_change = 1e-4, max_unchanged = 3)
     observer.reset()
 
     last_fval = f(x)
@@ -319,7 +319,7 @@ class BergholdSpreadMinimizer:
         mix_matrix = num.identity(n, num.Complex)
 
         raise NotImplementedError
-            
+
 
 
 
@@ -386,6 +386,7 @@ class MarzariSpreadMinimizer:
         new_scalar_products = {}
         for k_index in self.Crystal.KGrid:
             if self.DebugMode:
+                print self.Crystal.KGrid[k_index], toybox.unitariety_error(mix_matrix[k_index]) 
                 assert toybox.unitariety_error(mix_matrix[k_index]) < 1e-4
 
             for kgii in self.KWeights.HalfTheKGridIndexIncrements:
@@ -601,37 +602,6 @@ class MarzariSpreadMinimizer:
             gradient[k_index] = result
         return gradient
 
-    def spread_functional_gradient_marzari_omega_od(self, n_bands, scalar_products, wannier_centers = None):
-        ### WRONG!!! DELETE ME!
-        if wannier_centers is None:
-            wannier_centers = self.wannier_centers(n_bands, scalar_products)
-
-        gradient = DictionaryOfMatrices()
-        for k_index in self.Crystal.KGrid:
-            result = num.zeros((n_bands, n_bands), num.Complex)
-            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
-                if scalar_products[k_index, kgii] is None:
-                    continue
-
-                m = scalar_products[k_index, kgii]
-                m_diagonal = num.diagonal(m)
-
-                # Omega_OD part
-                r = num.multiply(m.H, m_diagonal)
-
-                if self.DebugMode:
-                    r2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            r2[i,j] = m[j,i].conjugate() * m[j,j]
-                    assert op.norm_frobenius(r-r2) < 1e-15
-
-                result += -2. * self.KWeights.KWeights[kgii_index] * \
-                          (r-r.H)
-            gradient[k_index] = result
-        return gradient
-        ### WRONG!!! DELETE ME!
-
     def spread_functional_gradient_omega_od(self, n_bands, scalar_products, wannier_centers = None):
         if wannier_centers is None:
             wannier_centers = self.wannier_centers(n_bands, scalar_products)
@@ -648,13 +618,6 @@ class MarzariSpreadMinimizer:
 
                 # Omega_OD part
                 r = num.multiply(m.H, m_diagonal)
-
-                if self.DebugMode:
-                    r2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            r2[i,j] = m[j,i].conjugate() * m[j,j]
-                    assert op.norm_frobenius(r-r2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
                           (-skew_symmetric_part(r.real.T)
@@ -679,27 +642,14 @@ class MarzariSpreadMinimizer:
                 # Omega_D part
                 r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
 
-                if self.DebugMode:
-                    r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
-                    assert op.norm_frobenius(r_tilde-r_tilde2) < 1e-13
-
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
-                    q[n] = arg(m_diagonal[n], (k_index, kgii, n))
+                    q[n] = arg(m_diagonal[n])
 
                 for n in range(n_bands):
                     q[n] += self.KWeights.KGridIncrements[kgii_index] \
                             * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
-                if self.DebugMode:
-                    t2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            t2[i,j] = r_tilde[i,j] * q[j]
-                    assert op.norm_frobenius(t-t2) < 1e-15
 
                 result += 4. * self.KWeights.KWeights[kgii_index] * \
                           (-skew_symmetric_part(t.imaginary.T)
@@ -707,6 +657,30 @@ class MarzariSpreadMinimizer:
 
             gradient[k_index] = result
         return gradient
+
+    def spread_functional_gradient_marzari_omega_od(self, n_bands, scalar_products, wannier_centers = None):
+        ### WRONG!!! DELETE ME!
+        if wannier_centers is None:
+            wannier_centers = self.wannier_centers(n_bands, scalar_products)
+
+        gradient = DictionaryOfMatrices()
+        for k_index in self.Crystal.KGrid:
+            result = num.zeros((n_bands, n_bands), num.Complex)
+            for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
+                if scalar_products[k_index, kgii] is None:
+                    continue
+
+                m = scalar_products[k_index, kgii]
+                m_diagonal = num.diagonal(m)
+
+                # Omega_OD part
+                r = num.multiply(m.H, m_diagonal)
+
+                result += -4. * self.KWeights.KWeights[kgii_index] * \
+                          (r.T-num.conjugate(r))/2.
+            gradient[k_index] = result
+        return gradient
+        ### WRONG!!! DELETE ME!
 
     def spread_functional_gradient_marzari_omega_d(self, n_bands, scalar_products, wannier_centers = None):
         ### WRONG!!! DELETE ME!
@@ -726,30 +700,17 @@ class MarzariSpreadMinimizer:
                 # Omega_D part
                 r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
 
-                if self.DebugMode:
-                    r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
-                    assert op.norm_frobenius(r_tilde-r_tilde2) < 1e-13
-
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
-                    q[n] = arg(m_diagonal[n], (k_index, kgii, n))
+                    q[n] = arg(m_diagonal[n])
 
                 for n in range(n_bands):
                     q[n] += self.KWeights.KGridIncrements[kgii_index] \
                             * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
-                if self.DebugMode:
-                    t2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            t2[i,j] = r_tilde[i,j] * q[j]
-                    assert op.norm_frobenius(t-t2) < 1e-15
 
-                result += -2. * self.KWeights.KWeights[kgii_index] * \
-                          (t+t.H)
+                result += -4 * self.KWeights.KWeights[kgii_index] * \
+                          (t.T+num.conjugate(t))/2j
             gradient[k_index] = result
         return gradient
         ### WRONG!!! DELETE ME!
@@ -763,7 +724,7 @@ class MarzariSpreadMinimizer:
 
             exp_dW = toybox.matrix_exp_by_diagonalization(dW)
             if self.DebugMode:
-                assert toybox.unitariety_error(exp_dW) < 1e-13
+                assert toybox.unitariety_error(exp_dW) < 1e-10
 
             temp_mix_matrix[k_index] = exp_dW * prev_mix_matrix[k_index]
 
@@ -986,13 +947,13 @@ class MarzariSpreadMinimizer:
                     oi_here = self.omega_i(len(pbands), temp_sps)
                     od = self.omega_d(len(pbands), temp_sps)
                     ood = self.omega_od(temp_sps)
-                    return oi_here+od+ood, sp, marz_sp
+                    return od, ood, sp_d, sp_od, marz_sp_d, marz_sp_od
                            
                 step = 0.5/(4*sum(self.KWeights.KWeights))
 
                 if self.InteractivityLevel and (raw_input("see plot? y/n [n]:") == "y"):
                     tools.write_1d_gnuplot_graphs(plotfunc, -5*step, 5 * step, 
-                                               steps = 100, progress = True)
+                                               steps = 400, progress = True)
                     raw_input("see plot:")
 
                 xmin = scipy.optimize.brent(minfunc, brack = (0, -step))
@@ -1193,7 +1154,8 @@ def run():
     debug_mode = raw_input("enable debug mode? [n]") == "y"
     ilevel_str = raw_input("interactivity level? [0]")
     interactivity_level = (ilevel_str) and int(ilevel_str) or 0
-    random.seed(200)
+    #random.seed(200)
+    random.seed(2000)
 
     job = fempy.stopwatch.Job("loading")
     crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
