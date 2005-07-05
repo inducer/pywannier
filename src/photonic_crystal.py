@@ -671,9 +671,10 @@ def visualize_grid_function(multicell_grid, func_on_multicell_grid):
     for multicell_index in multicell_grid:
         R = multicell_grid[multicell_index]
         offsets_and_mesh_functions.append((R, func_on_multicell_grid[multicell_index]))
-    fempy.visualization.visualizeSeveralMeshes("vtk", 
-                                               (",,result.vtk", ",,result_grid.vtk"), 
-                                               offsets_and_mesh_functions)
+    fempy.visualization.visualize_several_meshes(
+        "vtk", 
+        (",,result.vtk", ",,result_grid.vtk"), 
+        offsets_and_mesh_functions)
 
 
 

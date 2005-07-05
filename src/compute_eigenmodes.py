@@ -2,6 +2,7 @@ import math, cmath, sets, sys
 import cPickle as pickle
 
 import pytools
+import pytools.grid
 import pytools.stopwatch as stopwatch
 
 # Numerics imports ------------------------------------------------------------
@@ -75,8 +76,9 @@ def compute_eigenmodes_for_standard_unit_cell(lattice, epsilon, inner_radius,
 
     has_inversion_symmetry = True
 
-    k_grid  = pytools.make_cell_centered_grid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
-                                              [(0, k_grid_points)] * 2)
+    k_grid  = pytools.grid.make_cell_centered_grid(
+        -0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
+        [(0, k_grid_points)] * 2)
 
     
     crystals = []

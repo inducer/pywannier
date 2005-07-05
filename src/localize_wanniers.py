@@ -2,6 +2,7 @@ import math, cmath, random
 import cPickle as pickle
 
 import pytools
+import pytools.grid
 import pytools.stopwatch as stopwatch
 
 # Numerics imports ------------------------------------------------------------
@@ -387,8 +388,7 @@ class MarzariSpreadMinimizer:
         new_scalar_products = {}
         for k_index in self.Crystal.KGrid:
             if self.DebugMode:
-                print self.Crystal.KGrid[k_index], toybox.unitariety_error(mix_matrix[k_index]) 
-                assert toybox.unitariety_error(mix_matrix[k_index]) < 1e-4
+                assert toybox.unitariety_error(mix_matrix[k_index]) < 1e-8
 
             for kgii in self.KWeights.HalfTheKGridIndexIncrements:
                 added_tuple = self.Crystal.KGrid.reduce_periodically(
@@ -1192,9 +1192,10 @@ def run():
 
     mixed_bands = compute_mixed_bands(crystal, bands, mix_matrix)
 
-    wannier_grid = pytools.FiniteGrid(origin = num.array([0.,0.]),
-                                      grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                      limits = [(-1,2)] * 2)
+    wannier_grid = pytools.grid.FiniteGrid(
+        origin = num.array([0.,0.]),
+        grid_vectors = crystal.Lattice.DirectLatticeBasis,
+        limits = [(-1,2)] * 2)
 
     wanniers = compute_wanniers(crystal, mixed_bands, wannier_grid)
 

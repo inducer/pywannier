@@ -2,15 +2,17 @@ import math, sys
 import cmath
 import cPickle as pickle
 
+import pytools
+import pytools.grid
+import pytools.stopwatch as stopwatch
+
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
-import fempy.stopwatch
 import fempy.solver
 import fempy.eoc
-import fempy.tools as tools
 import fempy.integration
 import fempy.mesh_function
 import fempy.visualization as visualization
@@ -22,15 +24,15 @@ import photonic_crystal as pc
 
 
 
-job = fempy.stopwatch.Job("loading")
+job = stopwatch.Job("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
 crystal = crystals[0]
 
-multicell_grid = tools.FiniteGrid(origin = num.array([0.,0.], num.Float),
-                                  grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                  limits = [(-2,2)] * 2)
+multicell_grid = pytools.grid.FiniteGrid(origin = num.array([0.,0.], num.Float),
+                                         grid_vectors = crystal.Lattice.DirectLatticeBasis,
+                                         limits = [(-2,2)] * 2)
 
 dlb = crystal.Lattice.DirectLatticeBasis
 for band_index, band in enumerate(crystal.Bands):
