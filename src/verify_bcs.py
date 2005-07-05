@@ -1,6 +1,8 @@
 import math, cmath, sys, operator, random
 import cPickle as pickle
 
+import pytools.stopwatch as stopwatch
+
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 import pylinear.linear_algebra as la
@@ -10,10 +12,8 @@ import scipy.optimize
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
-import fempy.stopwatch
 import fempy.solver
 import fempy.eoc
-import fempy.tools as tools
 import fempy.integration
 import fempy.mesh_function
 import fempy.visualization as visualization
@@ -21,7 +21,7 @@ import fempy.visualization as visualization
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
 
-job = fempy.stopwatch.Job("loading")
+job = stopwatch.Job("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 
@@ -30,7 +30,7 @@ for crystal in crystals:
                                                   crystal.BoundaryShapeSection,
                                                   crystal.Lattice.DirectLatticeBasis)
 
-    job = fempy.stopwatch.Job("checking")
+    job = stopwatch.Job("checking")
     for band_index in range(len(crystal.Bands)):
         band = crystal.Bands[band_index]
         pband = crystal.PeriodicBands[band_index]

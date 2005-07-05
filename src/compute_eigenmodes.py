@@ -75,12 +75,6 @@ def compute_eigenmodes_for_standard_unit_cell(lattice, epsilon, inner_radius,
 
     has_inversion_symmetry = True
 
-    # make sure the grid has an even number of grid points,
-    # otherwise k=0 ends up on the grid. k=0 means zero frequency,
-    # so no eigenvalues. Arpack will still compute some, but they
-    # are garbage.
-
-    # This ends up being a genuine Monkhorst-Pack mesh.
     k_grid  = pytools.make_cell_centered_grid(-0.5*(rl[0]+rl[1]), lattice.ReciprocalLattice,
                                               [(0, k_grid_points)] * 2)
 
@@ -138,7 +132,7 @@ def run():
                                                          a*inner_radius,
                                                          refine_steps=0, # 4
                                                          coarsening_factor=1,
-                                                         k_grid_points=7)
+                                                         k_grid_points=8)
 
     job = stopwatch.Job("saving")
     pickle.dump(crystals, file(",,crystal.pickle", "wb"), pickle.HIGHEST_PROTOCOL)

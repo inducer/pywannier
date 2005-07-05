@@ -1,11 +1,12 @@
-import fempy.tools as tools
+import pytools
+import pytools.stopwatch as stopwatch
+
 import fempy.solver
 import fempy.mesh
 import fempy.eoc as eoc
 import fempy.element_norm as element_norm
 import fempy.mesh_function as mesh_function
 import fempy.visualization
-import fempy.stopwatch
 import fempy.geometry
 import fempy.visualization as visualization
 import photonic_crystal as pc
@@ -16,44 +17,44 @@ import math, cmath
 CONSIDERED_EVALUES = 5
 origin = num.zeros((2,), num.Float)
 
-fempy.stopwatch.HIDDEN_JOBS.append("arpack rci")
+stopwatch.HIDDEN_JOBS.append("arpack rci")
 
 def needsRefinement( vert_origin, vert_destination, vert_apex, area ):
     return area >= max_tri_area
 
-lattice = pc.tBravaisLattice([num.array([1,0]), num.array([0, 1])])
+lattice = pc.BravaisLattice([num.array([1,0]), num.array([0, 1])])
 rl = lattice.ReciprocalLattice
 k_track = [0.1*rl[0],
            0.4*rl[0],
            0.4*(rl[0]+rl[1]),
            0.1*(rl[0]+rl[1])]
-k_track = tools.interpolateVectorList(k_track, 3)
+k_track = pytools.interpolate_vector_list(k_track, 3)
 
-eigenvalue_eoc = eoc.tEOCRecorder()
-eigenfunc_l2_eoc = eoc.tEOCRecorder()
-eigenfunc_energy_eoc = eoc.tEOCRecorder()
+eigenvalue_eoc = eoc.EOCRecorder()
+eigenfunc_l2_eoc = eoc.EOCRecorder()
+eigenfunc_energy_eoc = eoc.EOCRecorder()
 
 do_visualization = raw_input("visualize? [n]") == "y"
 
 max_tri_area = 1e-1
 for step in range(7):
-    boundary = fempy.mesh.tShapeSection(
-        fempy.geometry.getParallelogram(lattice.DirectLatticeBasis), 
+    boundary = fempy.mesh.ShapeSection(
+        fempy.geometry.get_parallelogram(lattice.DirectLatticeBasis), 
         "floquet")
 
-    mesh = fempy.mesh.tTwoDimensionalMesh(
-        [fempy.mesh.tShapeSection(
-        fempy.geometry.getParallelogram(lattice.DirectLatticeBasis), 
+    mesh = fempy.mesh.TwoDimensionalMesh(
+        [fempy.mesh.ShapeSection(
+        fempy.geometry.get_parallelogram(lattice.DirectLatticeBasis), 
         "floquet")],
         refinement_func = needsRefinement)
     
     print "ITERATION %d: %d elements, %d nodes" % (step, len(mesh.elements()),
-                                                   len(mesh.dofManager()))
+                                                   len(mesh.dof_manager()))
                                                    
-    periodicity_nodes = pc.findPeriodicityNodes(mesh, boundary,
+    periodicity_nodes = pc.find_periodicity_nodes(mesh, boundary,
                                                 lattice.DirectLatticeBasis)
 
-    eigensolver = fempy.solver.tLaplacianEigenproblemSolver(
+    eigensolver = fempy.solver.LaplacianEigenproblemSolver(
         mesh, constrained_nodes = periodicity_nodes,
         typecode = num.Complex)
 
@@ -64,14 +65,14 @@ for step in range(7):
     evalue_count = 0
     efunc_count = 0
     for k in k_track:
-        eigensolver.setupConstraints(
-            pc.getFloquetConstraints(periodicity_nodes, k))
+        eigensolver.setup_constraints(
+            pc.get_floquet_constraints(periodicity_nodes, k))
 
         computed_pairs = eigensolver.solve(
             0, tolerance = 1e-10, number_of_eigenvalues = CONSIDERED_EVALUES + 3)
 
         analytic_evalues = []
-        for i,j in tools.generateAllIntegerTuplesBelow(5, 2):
+        for i,j in pytools.generate_all_integer_tuples_below(5, 2):
             lambd = (2*math.pi*i+k[0])**2 + \
                     (2*math.pi*j+k[1])**2 + 0.j
             analytic_evalues.append((lambd, (i,j)))
@@ -109,12 +110,12 @@ for step in range(7):
 
                 comp_emode *=  eigenfunc(origin) / comp_emode(origin)
 
-                energy_estimator = element_norm.makeEnergyErrorNormSquared(grad_eigenfunc, comp_emode)
-                energy_error = tools.sumOver(energy_estimator, mesh.elements())
+                energy_estimator = element_norm.make_energy_error_norm_squared(grad_eigenfunc, comp_emode)
+                energy_error = pytools.sum_over(energy_estimator, mesh.elements())
                 eigenfunc_energy_errors += energy_error
 
-                l2_estimator = element_norm.makeL2ErrorNormSquared(eigenfunc, comp_emode)
-                l2_error = tools.sumOver(l2_estimator, mesh.elements())
+                l2_estimator = element_norm.make_l2_error_norm_squared(eigenfunc, comp_emode)
+                l2_error = pytools.sum_over(l2_estimator, mesh.elements())
                 eigenfunc_l2_errors += l2_error
 
                 efunc_count += 1
@@ -132,14 +133,14 @@ for step in range(7):
                     print "this error:", total_error
         print "erors:", eigenvalue_errors, eigenfunc_l2_errors, eigenfunc_energy_errors
 
-    eigenfunc_l2_eoc.addDataPoint(math.sqrt(len(mesh.elements())),
-                               math.sqrt(abs(eigenfunc_l2_errors))/efunc_count)
+    eigenfunc_l2_eoc.add_data_point(math.sqrt(len(mesh.elements())),
+                                    math.sqrt(abs(eigenfunc_l2_errors))/efunc_count)
 
-    eigenfunc_energy_eoc.addDataPoint(math.sqrt(len(mesh.elements())),
-                                      math.sqrt(abs(eigenfunc_energy_errors))/efunc_count)
+    eigenfunc_energy_eoc.add_data_point(math.sqrt(len(mesh.elements())),
+                                        math.sqrt(abs(eigenfunc_energy_errors))/efunc_count)
 
-    eigenvalue_eoc.addDataPoint(math.sqrt(len(mesh.elements())),
-                                math.sqrt(eigenvalue_errors)/evalue_count)
+    eigenvalue_eoc.add_data_point(math.sqrt(len(mesh.elements())),
+                                  math.sqrt(eigenvalue_errors)/evalue_count)
 
     max_tri_area *= 0.5
 

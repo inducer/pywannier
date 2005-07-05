@@ -1,16 +1,17 @@
 import math, cmath, sys, operator, random
 import cPickle as pickle
 
+import pytools
+import pytools.stopwatch as stopwatch
+
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 import pylinear.toybox as toybox
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
-import fempy.stopwatch
 import fempy.solver
 import fempy.eoc
-import fempy.tools as tools
 import fempy.integration
 import fempy.mesh_function
 import fempy.visualization as visualization
@@ -38,27 +39,25 @@ def verify_band_orthogonality(crystal, spc, bands, threshold):
     return violations, total
 
 def run():
-    job = fempy.stopwatch.tJob("loading")
+    job = stopwatch.Job("loading")
     crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
     job.done()
 
     crystal = crystals[0]
 
     for crystal in crystals:
-        spc = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
-                                                           crystal.MassMatrix)
+        spc = fempy.mesh_function.ScalarProductCalculator(crystal.NodeNumberAssignment,
+                                                          crystal.MassMatrix)
 
-        job = fempy.stopwatch.tJob("checking bloch functions")
+        job = stopwatch.Job("checking bloch functions")
         vio, tot = verify_band_orthogonality(crystal, spc, crystal.Bands, 2e-3)
         job.done()
         print vio, "violations out of", tot
 
-        job = fempy.stopwatch.tJob("checking periodicized bloch functions")
+        job = stopwatch.Job("checking periodicized bloch functions")
         vio, tot = verify_band_orthogonality(crystal, spc, crystal.PeriodicBands, 3e-3)
         job.done()
         print vio, "violations out of", tot
 
 if __name__ == "__main__":
     run()
-
-
