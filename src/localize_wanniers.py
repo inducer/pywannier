@@ -1,6 +1,9 @@
 import math, cmath, random
 import cPickle as pickle
 
+import pytools
+import pytools.stopwatch as stopwatch
+
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 import pylinear.linear_algebra as la
@@ -13,10 +16,8 @@ import scipy.optimize
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
-import fempy.stopwatch
 import fempy.solver
 import fempy.eoc
-import fempy.tools as tools
 import fempy.integration
 import fempy.mesh_function
 
@@ -26,7 +27,7 @@ import photonic_crystal as pc
 
 
 
-class DictionaryOfMatrices(tools.DictionaryOfArithmeticTypes):
+class DictionaryOfMatrices(pytools.DictionaryOfArithmeticTypes):
     def _get_empty_self(self):
         return DictionaryOfMatrices()
 
@@ -241,7 +242,7 @@ class KSpaceDirectionalWeights:
             self.HalfTheKGridIndexIncrements.append(tuple(direction))
 
         self.KGridIndexIncrements = self.HalfTheKGridIndexIncrements + \
-                                    [tools.negate_tuple(kgii) 
+                                    [pytools.negate_tuple(kgii) 
                                      for kgii in self.HalfTheKGridIndexIncrements]
 
         self.KGridIncrements = [crystal.KGrid[kgii] - crystal.KGrid[0,0]
@@ -256,7 +257,7 @@ class KSpaceDirectionalWeights:
                 my_sum = 0
                 for kgi_index, kgi in enumerate(self.KGridIncrements):
                     my_sum += self.KWeights[kgi_index]*kgi[i]*kgi[j]
-                assert abs(my_sum - tools.delta(i, j)) < 1e-15
+                assert abs(my_sum - pytools.delta(i, j)) < 1e-15
 
 
 
@@ -339,8 +340,8 @@ class MarzariSpreadMinimizer:
         for k_index in self.Crystal.KGrid:
             for kgii_index, kgii in enumerate(self.KWeights.HalfTheKGridIndexIncrements):
                 #added_tuple = self.Crystal.KGrid.reduce_periodically(
-                    #tools.add_tuples(k_index, kgii))
-                added_tuple = tools.add_tuples(k_index, kgii)
+                    #pytools.add_tuples(k_index, kgii))
+                added_tuple = pytools.add_tuples(k_index, kgii)
 
                 mat = num.zeros((n_bands, n_bands), num.Complex)
                 for i in range(n_bands):
@@ -350,7 +351,7 @@ class MarzariSpreadMinimizer:
                 scalar_products[k_index, kgii] = mat
 
                 red_tuple = self.Crystal.KGrid.reduce_periodically(added_tuple)
-                negated_kgii = tools.negate_tuple(kgii)
+                negated_kgii = pytools.negate_tuple(kgii)
                 scalar_products[red_tuple, negated_kgii] = mat.H
 
         self.check_scalar_products(scalar_products)
@@ -365,7 +366,7 @@ class MarzariSpreadMinimizer:
 
         for k_index in self.Crystal.KGrid:
             for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
-                added_tuple = tools.add_tuples(k_index, kgii)
+                added_tuple = pytools.add_tuples(k_index, kgii)
 
                 mat = num.zeros((n_bands, n_bands), num.Complex)
                 for i in range(n_bands):
@@ -391,14 +392,14 @@ class MarzariSpreadMinimizer:
 
             for kgii in self.KWeights.HalfTheKGridIndexIncrements:
                 added_tuple = self.Crystal.KGrid.reduce_periodically(
-                    tools.add_tuples(k_index, kgii))
+                    pytools.add_tuples(k_index, kgii))
 
                 mat = mix_matrix[added_tuple] * scalar_products[k_index, kgii] * mix_matrix[k_index].H
 
                 new_scalar_products[k_index, kgii] = mat
 
                 red_tuple = self.Crystal.KGrid.reduce_periodically(added_tuple)
-                negated_kgii = tools.negate_tuple(kgii)
+                negated_kgii = pytools.negate_tuple(kgii)
                 new_scalar_products[red_tuple, negated_kgii] = mat.H
 
         self.check_scalar_products(new_scalar_products)
@@ -734,7 +735,7 @@ class MarzariSpreadMinimizer:
         if not self.DebugMode:
             return
 
-        job = fempy.stopwatch.Job("self-test")
+        job = stopwatch.Job("self-test")
         sps_original = self.compute_offset_scalar_products(pbands)
         sps_updated = self.update_offset_scalar_products(sps_original, mix_matrix)
         mixed_bands = compute_mixed_periodic_bands(self.Crystal, pbands, mix_matrix)
@@ -767,7 +768,7 @@ class MarzariSpreadMinimizer:
                 if sps[k_index, kgii] is not None:
                     omega_od_matrices.append(sps[k_index, kgii].copy())
 
-        job = fempy.stopwatch.Job("pre-minimization")
+        job = stopwatch.Job("pre-minimization")
         q, diag_mats, tol = toybox.codiagonalize(omega_od_matrices)
         job.done()
 
@@ -786,7 +787,7 @@ class MarzariSpreadMinimizer:
 
         self.test_sp_updater(pbands, mix_matrix)
 
-        job = fempy.stopwatch.Job("computing scalar products")
+        job = stopwatch.Job("computing scalar products")
         orig_sps = self.compute_offset_scalar_products(pbands)
         self.check_initial_scalar_products(pbands, orig_sps)
         job.done()
@@ -839,7 +840,7 @@ class MarzariSpreadMinimizer:
 
                     for k_index in self.Crystal.KGrid:
                         for kgii_index, kgii in enumerate(self.KWeights.KGridIndexIncrements):
-                            added_tup = self.Crystal.KGrid.reduce_periodically(tools.add_tuples(k_index, kgii))
+                            added_tup = self.Crystal.KGrid.reduce_periodically(pytools.add_tuples(k_index, kgii))
 
                             w_b = self.KWeights.KWeights[kgii_index]
 
@@ -952,7 +953,7 @@ class MarzariSpreadMinimizer:
                 step = 0.5/(4*sum(self.KWeights.KWeights))
 
                 if self.InteractivityLevel and (raw_input("see plot? y/n [n]:") == "y"):
-                    tools.write_1d_gnuplot_graphs(plotfunc, -5*step, 5 * step, 
+                    pytools.write_1d_gnuplot_graphs(plotfunc, -5*step, 5 * step, 
                                                steps = 400, progress = True)
                     raw_input("see plot:")
 
@@ -974,7 +975,7 @@ class MarzariSpreadMinimizer:
 
         self.test_sp_updater(pbands, mix_matrix)
 
-        job = fempy.stopwatch.Job("computing scalar products")
+        job = stopwatch.Job("computing scalar products")
         orig_sps = self.compute_offset_scalar_products(pbands)
         self.check_initial_scalar_products(pbands, orig_sps)
         job.done()
@@ -1010,7 +1011,7 @@ def compute_mixed_bands(crystal, bands, mix_matrix):
 
         for k_index in crystal.KGrid:
             # set eigenvalue to 0 since there is no meaning attached to it
-            band[k_index] = 0, tools.linear_combination(mix_matrix[k_index][n],
+            band[k_index] = 0, pytools.linear_combination(mix_matrix[k_index][n],
                                                         [bands[i][k_index][1] 
                                                          for i in range(len(bands))])
         result.append(band)
@@ -1028,7 +1029,7 @@ def compute_mixed_periodic_bands(crystal, pbands, mix_matrix):
             reduced_k_index = crystal.KGrid.reduce_periodically(k_index)
 
             # set eigenvalue to 0 since there is no meaning attached to it
-            pband[k_index] = 0.j, tools.linear_combination(mix_matrix[reduced_k_index][n],
+            pband[k_index] = 0.j, pytools.linear_combination(mix_matrix[reduced_k_index][n],
                                                            [pbands[i][k_index][1] 
                                                             for i in range(len(pbands))])
         result.append(pband)
@@ -1036,11 +1037,11 @@ def compute_mixed_periodic_bands(crystal, pbands, mix_matrix):
 
 def integrate_over_k_grid(k_grid, f):
     return (1./ k_grid.grid_point_count()) \
-           * tools.general_sum([f(k_index, k_grid[k_index])
+           * pytools.general_sum([f(k_index, k_grid[k_index])
                                for k_index in k_grid])
 
 def compute_wanniers(crystal, bands, wannier_grid):
-    job = fempy.stopwatch.Job("computing wannier functions")
+    job = stopwatch.Job("computing wannier functions")
     wannier_functions = []
 
     for n, band in enumerate(bands):
@@ -1082,7 +1083,7 @@ def generate_random_gaussians(crystal, typecode):
         i = random.randint(0,len(dlb)-1)
         center_coords = num.zeros((len(dlb),), num.Float)
         center_coords[i] = random.uniform(-0.4, 0.4)
-        center = dlb[i] * tools.linear_combination(center_coords, dlb)
+        center = dlb[i] * pytools.linear_combination(center_coords, dlb)
 
         sigma = num.zeros((len(dlb), len(dlb)), num.Float)
         for i in range(len(dlb)):
@@ -1095,10 +1096,10 @@ def generate_random_gaussians(crystal, typecode):
             arg = sigma_inv*(point - center)
             return math.exp(-op.norm_2_squared(arg))
 
-        yield fempy.mesh_function.discretizeFunction(crystal.Mesh, 
-                                                     gaussian, 
-                                                     typecode,
-                                                     crystal.NodeNumberAssignment)
+        yield fempy.mesh_function.discretize_function(crystal.Mesh, 
+                                                      gaussian, 
+                                                      typecode,
+                                                      crystal.NodeNumberAssignment)
     
 def guess_initial_mix_matrix(crystal, bands, sp):
     # generate the gaussians
@@ -1115,7 +1116,7 @@ def guess_initial_mix_matrix(crystal, bands, sp):
         projected_band_co = {}
 
         for k_index in crystal.KGrid:
-            mf = fempy.mesh_function.discretizeFunction(
+            mf = fempy.mesh_function.discretize_function(
                 crystal.Mesh, lambda x: 0., num.Complex, 
                 number_assignment = crystal.NodeNumberAssignment)
             coordinates = num.zeros((len(bands),), num.Complex)
@@ -1143,7 +1144,7 @@ def guess_initial_mix_matrix(crystal, bands, sp):
         mix_matrix[k_index] = num.zeros((len(bands), len(bands)), num.Complex)
         for n in range(len(bands)):
             # determine and compute correct mixture of projected bands
-            mix_matrix[k_index][n] = tools.linear_combination(
+            mix_matrix[k_index][n] = pytools.linear_combination(
                 inv_sqrt_my_sps[n], 
                 [projected_bands_co[i][k_index] 
                  for i in range(len(bands))])
@@ -1157,7 +1158,7 @@ def run():
     #random.seed(200)
     random.seed(2000)
 
-    job = fempy.stopwatch.Job("loading")
+    job = stopwatch.Job("loading")
     crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
     job.done()
 
@@ -1170,8 +1171,8 @@ def run():
         crystal.KGrid, 
         lambda k_index, k: cmath.exp(1j*(k * num.array([0.,0.]))))) < 1e-10
 
-    sp = fempy.mesh_function.tScalarProductCalculator(crystal.NodeNumberAssignment,
-                                                      crystal.MassMatrix)
+    sp = fempy.mesh_function.ScalarProductCalculator(crystal.NodeNumberAssignment,
+                                                     crystal.MassMatrix)
                                                       
     gaps, clusters = pc.analyze_band_structure(crystal.Bands)
     print "Gaps:", gaps
@@ -1180,7 +1181,7 @@ def run():
     bands = crystal.Bands[1:4]
     pbands = crystal.PeriodicBands[1:4]
 
-    job = fempy.stopwatch.Job("guessing initial mix")
+    job = stopwatch.Job("guessing initial mix")
     mix_matrix = guess_initial_mix_matrix(crystal, bands, sp)
     job.done()
 
@@ -1191,9 +1192,9 @@ def run():
 
     mixed_bands = compute_mixed_bands(crystal, bands, mix_matrix)
 
-    wannier_grid = tools.FiniteGrid(origin = num.array([0.,0.]),
-                                    grid_vectors = crystal.Lattice.DirectLatticeBasis,
-                                    limits = [(-1,2)] * 2)
+    wannier_grid = pytools.FiniteGrid(origin = num.array([0.,0.]),
+                                      grid_vectors = crystal.Lattice.DirectLatticeBasis,
+                                      limits = [(-1,2)] * 2)
 
     wanniers = compute_wanniers(crystal, mixed_bands, wannier_grid)
 

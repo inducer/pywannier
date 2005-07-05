@@ -1,6 +1,7 @@
 import math, cmath, sets
-import fempy.tools as tools
-import fempy.stopwatch
+import pytools
+import pytools.stopwatch as stopwatch
+
 import fempy.mesh_function
 import fempy.mesh
 import fempy.geometry
@@ -65,8 +66,8 @@ class BravaisLattice:
                 for indirect_vector_coordinate in range(d):
                     mat[equation_no, indirect_vector_number * d + indirect_vector_coordinate] = \
                                      direct_vec[indirect_vector_coordinate]
-                rhs[equation_no] = math.pi * 2 * tools.delta(direct_vector_number,
-                                                             indirect_vector_number)
+                    rhs[equation_no] = math.pi * 2 * pytools.delta(direct_vector_number,
+                                                               indirect_vector_number)
                 equation_no += 1
 
         sol = la.solve_linear_equations(mat, rhs)
@@ -127,9 +128,9 @@ class InvertedModeListLookerUpper:
     def __call__(self, dictionary, failed_key):
         new_key = invert_k_index(self.KGrid, failed_key)
         modelist = dictionary[new_key]
-        return tools.FakeList(lambda i: (modelist[i][0].conjugate(),
-                                         modelist[i][1].conjugate()),
-                              len(modelist))
+        return pytools.FakeList(lambda i: (modelist[i][0].conjugate(),
+                                           modelist[i][1].conjugate()),
+                                len(modelist))
 
 
 
@@ -146,7 +147,7 @@ class InvertedIdenticalLookerUpper:
 
 
 class ReducedBrillouinModeListLookerUpper:
-    """This class is meant as lookup function for a tools.tDependentDictionary.
+    """This class is meant as lookup function for a pytools.DependentDictionary.
     It will map all of k-space to the left (k[0]<0) half of the Brillouin zone,
     excluding the top rim.
 
@@ -162,9 +163,9 @@ class ReducedBrillouinModeListLookerUpper:
         if self.KGrid[reduced_key][0] > 0:
             inverted_key = invert_k_index(self.KGrid, reduced_key)
             modelist = dictionary[inverted_key]
-            return tools.FakeList(lambda i: (modelist[i][0].conjugate(),
-                                             modelist[i][1].conjugate()),
-                                   len(modelist))
+            return pytools.FakeList(lambda i: (modelist[i][0].conjugate(),
+                                               modelist[i][1].conjugate()),
+                                    len(modelist))
         else:
             # only needs reduction
             return dictionary[reduced_key]
@@ -173,7 +174,7 @@ class ReducedBrillouinModeListLookerUpper:
 
 
 class ReducedBrillouinLookerUpper:
-    """This class is meant as lookup function for a tools.tDependentDictionary.
+    """This class is meant as lookup function for a pytools.DependentDictionary.
     It will map all of k-space to the left (k[0]<0) half of the Brillouin zone,
     excluding the top rim.
 
@@ -208,31 +209,31 @@ class KPeriodicLookerUpper:
 
 
 def make_k_periodic_lookup_structure(k_grid, dictionary = {}):
-    return tools.DependentDictionary(KPeriodicLookerUpper(k_grid), 
-                                     dictionary)
+    return pytools.DependentDictionary(KPeriodicLookerUpper(k_grid), 
+                                       dictionary)
 
 
 
 
 def find_periodicity_nodes(mesh, boundary, grid_vectors, order = 2):
     bnodes = [node 
-              for node in mesh.dofManager()
+              for node in mesh.dof_manager()
               if node.TrackingId == "floquet"]
     
-    job = fempy.stopwatch.Job("periodicity")
+    job = stopwatch.Job("periodicity")
 
     periodicity_nodes = {}
     for node in bnodes:
         for gv in grid_vectors:
             ideal_point = node.Coordinates + gv
-            if not boundary.containsPoint(ideal_point):
+            if not boundary.contains_point(ideal_point):
                 continue
 
             dist_threshold = op.norm_2(gv) * 0.3
 
             close_nodes_with_dists = filter(
                 lambda (n, dist): dist <= dist_threshold, 
-                tools.decorate(
+                pytools.decorate(
                 lambda other_node: op.norm_2(ideal_point - other_node.Coordinates), bnodes))
             close_nodes_with_dists.sort(lambda (n1,d1), (n2,d2): cmp(d1,d2))
             
@@ -255,7 +256,7 @@ def find_periodicity_nodes(mesh, boundary, grid_vectors, order = 2):
                 
                 other_nodes_with_alpha = [(first_other_node, 1.)]
                 for candidate, dist in close_nodes_with_dists[1:]:
-                    dtl, alpha = tools.distanceToLine(ideal_point, direction, candidate.Coordinates)
+                    dtl, alpha = pytools.distanceToLine(ideal_point, direction, candidate.Coordinates)
                     if dtl < 1e-5:
                         other_nodes_with_alpha.append((candidate, alpha))
                     if len(other_nodes_with_alpha) >= order+1:
@@ -344,7 +345,7 @@ def find_bands(crystal, modes, scalar_product_calculator):
     Returns a list of Band objects.
     """
 
-    all_dirs = tools.enumerate_basic_directions(2)
+    all_dirs = pytools.enumerate_basic_directions(2)
     spc = scalar_product_calculator
     k_grid = crystal.KGrid
     
@@ -356,7 +357,7 @@ def find_bands(crystal, modes, scalar_product_calculator):
         result = []
         for step_count in range(max_count):
             k_index = k_grid.reduce_periodically(
-                tools.add_tuples(k_index, k_index_increment))
+                pytools.add_tuples(k_index, k_index_increment))
 
             if k_index in band:
                 result.append(k_index)
@@ -375,13 +376,13 @@ def find_bands(crystal, modes, scalar_product_calculator):
         for index in indices:
             evalue, emode = modes[k_index][index]
             distances[index] = sum([abs(evalue-ref_evalue) for ref_evalue in eigenvalues])
-            sps[index] = tools.average([abs(spc(emode, ref_emode)) for ref_emode in eigenmodes])
+            sps[index] = pytools.average([abs(spc(emode, ref_emode)) for ref_emode in eigenmodes])
 
             # FIXME inherently bogus
             # or, rather, needs parameter adjustment...
             joint_scores[index] = len(eigenmodes)/(1e-20+sps[index]) + distances[index]
 
-        best_index = indices[tools.argmin(indices, lambda i: distances[i])]
+        best_index = indices[pytools.argmin(indices, lambda i: distances[i])]
         return best_index
 
         best_value = distances[best_index]
@@ -395,7 +396,7 @@ def find_bands(crystal, modes, scalar_product_calculator):
             return best_index
         else:
             # use "joint score" as a tie breaker
-            best_index_joint = tied_values[tools.argmin(tied_values, 
+            best_index_joint = tied_values[pytools.argmin(tied_values, 
                                                         lambda i: joint_scores[i])]
 
             return best_index_joint
@@ -605,13 +606,13 @@ def normalize_modes(k_grid, modes, scalar_product_calculator):
 
 
 def get_exp_ikr_mesh_function(mesh, number_assignment, k, exponent=1):
-    mf = fempy.mesh_function.tMeshFunction(mesh, number_assignment,
-                                            typecode=num.Complex)
+    mf = fempy.mesh_function.MeshFunction(mesh, number_assignment,
+                                          typecode=num.Complex)
     vec = mf.vector()
     na = number_assignment
     exponent *= 1j
 
-    for node in mesh.dofManager():
+    for node in mesh.dof_manager():
         vec[na[node]] = cmath.exp(exponent * k * node.Coordinates)
     return mf
 
@@ -625,7 +626,7 @@ def periodicize_mesh_function(mf, k, exponent=-1):
 
     exponent *= 1j
 
-    for node in mf.mesh().dofManager():
+    for node in mf.mesh().dof_manager():
         pvec[na[node]] = vec[na[node]] * cmath.exp(exponent*node.Coordinates*k)
     return mf.copy(vector = pvec)
 
@@ -634,7 +635,7 @@ def periodicize_mesh_function(mf, k, exponent=-1):
 
 def periodicize_modes(crystal, modes, exponent=-1, verify=False):
     if crystal.HasInversionSymmetry:
-        pmodes = tools.DependentDictionary(
+        pmodes = pytools.DependentDictionary(
             InvertedModeListLookerUpper(crystal.KGrid))
     else:
         pmodes = {}
@@ -690,13 +691,13 @@ def generate_square_mesh_with_rod_center(lattice, inner_radius, coarsening_facto
         else:
             return area >= 1e-2 * coarsening_factor
 
-    boundary = fempy.mesh.tShapeSection(
-        fempy.geometry.getParallelogram(lattice.DirectLatticeBasis), constraint_id)
+    boundary = fempy.mesh.ShapeSection(
+        fempy.geometry.get_parallelogram(lattice.DirectLatticeBasis), constraint_id)
     geometry = [boundary,
-                fempy.mesh.tShapeSection(
-        fempy.geometry.getCircle(inner_radius, use_exact), None)]
+                fempy.mesh.ShapeSection(
+        fempy.geometry.get_circle(inner_radius, use_exact), None)]
 
-    return fempy.mesh.tTwoDimensionalMesh(
+    return fempy.mesh.TwoDimensionalMesh(
         geometry, refinement_func = needs_refinement), boundary
 
 
