@@ -1,10 +1,11 @@
-import fempy.tools as tools
+import pytools 
 import fempy.solver
 import fempy.mesh
 import fempy.visualization
 import photonic_crystal as pc
 import pylinear.array as num
 import pylinear.operation as op
+import pylinear.toybox as toybox
 import math, cmath
 
 lowest_functions = []
@@ -22,7 +23,7 @@ class Problem1D:
             else:
                 return 1
 
-        self.EigenSolver = fempy.solver.tLaplacianEigenproblemSolver(
+        self.EigenSolver = fempy.solver.LaplacianEigenproblemSolver(
             self.Mesh, constrained_nodes = [self.RightNode], g = eps,
             typecode = num.Complex)
         nodes = [node for node in self.Mesh.dofManager()]
@@ -35,7 +36,7 @@ class Problem1D:
 
     def get_condition_number(self, k):
         mm = num.matrixmultiply
-        a = self.EigenSolver.setupConstraints(
+        a = self.EigenSolver.setup_constraints(
             {self.RightNode: (0, [(cmath.exp(1j*k[0]), self.LeftNode)])})
         s = self.EigenSolver.stiffnessMatrix()
         m = self.EigenSolver.massMatrix()
@@ -50,7 +51,7 @@ class Problem1D:
         rl = self.Lattice.ReciprocalLattice
 
         print "computing for k = ",k
-        self.EigenSolver.setupConstraints(
+        self.EigenSolver.setup_constraints(
             {self.RightNode: (0, [(cmath.exp(1j*k[0]), self.LeftNode)])})
         pairs = self.EigenSolver.solve(0,
                                        tolerance = 1e-6,
@@ -77,7 +78,7 @@ class Problem2D:
         self.PeriodicityNodes = pc.find_periodicity_nodes(self.Mesh, 
                                                           boundary,
                                                           self.Lattice.DirectLatticeBasis)
-        self.EigenSolver = fempy.solver.tLaplacianEigenproblemSolver(
+        self.EigenSolver = fempy.solver.LaplacianEigenproblemSolver(
             self.Mesh, constrained_nodes = self.PeriodicityNodes,
             g = epsilon, typecode = num.Complex)
 
@@ -89,7 +90,7 @@ class Problem2D:
                 0.01*(rl[0]+rl[1])]
 
     def get_eigenvalues(self, k):
-        self.EigenSolver.setupConstraints(
+        self.EigenSolver.setup_constraints(
             pc.get_floquet_constraints(self.PeriodicityNodes, k))
 
         print "computing for k = ",k
@@ -100,7 +101,7 @@ class Problem2D:
         return [evalue for evalue, em in pairs]
 
 problem = Problem2D()
-k_track = tools.interpolate_vector_list(problem.k_track(), 49)
+k_track = toybox.interpolate_vector_list(problem.k_track(), 49)
 
 def scale_eigenvalue(ev):
     return math.sqrt(abs(ev)) / (2 * math.pi)
