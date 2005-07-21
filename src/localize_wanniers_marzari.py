@@ -158,7 +158,7 @@ def minimize_by_cg(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None
     # Polak-Ribi`ere with implicit restart
 
     d = last_r = -grad(x)
-    observer = iteration.make_observer(min_change = 1e-4, max_unchanged = 3)
+    observer = iteration.make_observer(min_change = 1e-10, max_unchanged = 3)
     observer.reset()
 
     last_fval = f(x)
@@ -463,10 +463,6 @@ class MarzariSpreadMinimizer:
                             r2[i,j] = m[j,i].conjugate() * m[j,j]
                     assert op.norm_frobenius(r-r2) < 1e-15
 
-                result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-skew_symmetric_part(r.real.T)
-                           +1j*symmetric_part(r.imaginary))
-
                 # Omega_D part
                 r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
 
@@ -492,14 +488,14 @@ class MarzariSpreadMinimizer:
                             t2[i,j] = r_tilde[i,j] * q[j]
                     assert op.norm_frobenius(t-t2) < 1e-15
 
-                result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-skew_symmetric_part(t.imaginary.T)
-                           -1j*symmetric_part(t.real))
+                result += -4. * self.KWeights.KWeights[kgii_index] * \
+                          ((r-r.H)*0.5 - (t+t.H)*0.5j)
 
             gradient[k_index] = result
         return gradient
 
     def spread_functional_gradient_omega_od(self, n_bands, scalar_products, wannier_centers = None):
+        assert False
         if wannier_centers is None:
             wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
@@ -523,6 +519,7 @@ class MarzariSpreadMinimizer:
         return gradient
 
     def spread_functional_gradient_omega_d(self, n_bands, scalar_products, wannier_centers = None):
+        assert False
         if wannier_centers is None:
             wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
@@ -633,7 +630,7 @@ class MarzariSpreadMinimizer:
 
         oi = self.omega_i(len(pbands), orig_sps)
 
-        observer = iteration.make_observer(min_change = 1e-3, max_unchanged = 3)
+        observer = iteration.make_observer(min_change = 1e-7, max_unchanged = 3)
         observer.reset()
         try:
             while True:
