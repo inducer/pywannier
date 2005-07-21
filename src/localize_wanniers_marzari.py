@@ -99,15 +99,8 @@ def grad_scalar_product(a1, a2):
     return num.sum(rp) + num.sum(ip)
 
 def k_dependent_matrix_gradient_scalar_product(k_grid, a1, a2):
-    # we can't use complex multiplication since our "complex" number
-    # here is just a convenient notation for a gradient, so the real
-    # and imaginary parts have to stay separate.
-    sp = 0.
-    for k_index in k_grid:
-        rp = num.multiply(a1[k_index].real, a2[k_index].real)
-        ip = num.multiply(a1[k_index].imaginary, a2[k_index].imaginary)
-        sp += num.sum(rp) + num.sum(ip)
-    return sp / k_grid.grid_point_count()
+    return sum(num.trace(a1[k_index]*a2[k_index]) for k_index in k_grid) \
+           / k_grid.grid_point_count()
 
 def operate_on_k_dependent_matrix(k_grid, a, m_op):
     result = {}
