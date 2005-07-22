@@ -99,8 +99,10 @@ def grad_scalar_product(a1, a2):
     return num.sum(rp) + num.sum(ip)
 
 def k_dependent_matrix_gradient_scalar_product(k_grid, a1, a2):
-    return sum(num.trace(a1[k_index]*a2[k_index]) for k_index in k_grid) \
-           / k_grid.grid_point_count()
+    result = sum(num.trace(a1[k_index]*a2[k_index]) for k_index in k_grid) \
+             / k_grid.grid_point_count()
+    assert abs(result.imag) < 1e-10
+    return result.real
 
 def operate_on_k_dependent_matrix(k_grid, a, m_op):
     result = {}
@@ -456,22 +458,8 @@ class MarzariSpreadMinimizer:
                 # Omega_OD part
                 r = num.multiply(num.hermite(m), m_diagonal)
 
-                if self.DebugMode:
-                    r2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            r2[i,j] = m[j,i].conjugate() * m[j,j]
-                    assert op.norm_frobenius(r-r2) < 1e-15
-
                 # Omega_D part
                 r_tilde = num.divide(m.H, num.conjugate(m_diagonal))
-
-                if self.DebugMode:
-                    r_tilde2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            r_tilde2[i,j] = (m[j,i] / m[j,j]).conjugate()
-                    assert op.norm_frobenius(r_tilde-r_tilde2) < 1e-13
 
                 q = num.zeros((n_bands,), num.Complex)
                 for n in range(n_bands):
@@ -481,21 +469,14 @@ class MarzariSpreadMinimizer:
                     q[n] += self.KWeights.KGridIncrements[kgii_index] \
                             * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
-                if self.DebugMode:
-                    t2 = num.zeros((n_bands, n_bands), num.Complex)
-                    for i in range(n_bands):
-                        for j in range(n_bands):
-                            t2[i,j] = r_tilde[i,j] * q[j]
-                    assert op.norm_frobenius(t-t2) < 1e-15
 
-                result += -4. * self.KWeights.KWeights[kgii_index] * \
-                          ((r-r.H)*0.5 - (t+t.H)*0.5j)
+                result += 2. * self.KWeights.KWeights[kgii_index] * \
+                          (-(r-r.H) + (t+t.H)*1j)
 
             gradient[k_index] = result
         return gradient
 
     def spread_functional_gradient_omega_od(self, n_bands, scalar_products, wannier_centers = None):
-        assert False
         if wannier_centers is None:
             wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
@@ -512,14 +493,11 @@ class MarzariSpreadMinimizer:
                 # Omega_OD part
                 r = num.multiply(m.H, m_diagonal)
 
-                result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-skew_symmetric_part(r.real.T)
-                           +1j*symmetric_part(r.imaginary))
+                result += -2. * self.KWeights.KWeights[kgii_index] * (r-r.H)
             gradient[k_index] = result
         return gradient
 
     def spread_functional_gradient_omega_d(self, n_bands, scalar_products, wannier_centers = None):
-        assert False
         if wannier_centers is None:
             wannier_centers = self.wannier_centers(n_bands, scalar_products)
 
@@ -545,9 +523,7 @@ class MarzariSpreadMinimizer:
                             * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
 
-                result += 4. * self.KWeights.KWeights[kgii_index] * \
-                          (-skew_symmetric_part(t.imaginary.T)
-                           -1j*symmetric_part(t.real))
+                result += 2.j * self.KWeights.KWeights[kgii_index] * (t+t.H)
 
             gradient[k_index] = result
         return gradient
@@ -780,16 +756,17 @@ class MarzariSpreadMinimizer:
                     ood = self.omega_od(temp_sps)
                     return od, ood, sp_d, sp_od
                            
-                step = 0.5/(4*sum(self.KWeights.KWeights))
+                # negative because we're pointing downwards!
+                step = -0.5/(4*sum(self.KWeights.KWeights))
 
                 if self.InteractivityLevel and (raw_input("see plot? y/n [n]:") == "y"):
                     pytools.write_1d_gnuplot_graphs(plotfunc, -5*step, 5 * step, 
                                                steps = 400, progress = True)
                     raw_input("see plot:")
 
-                xmin = scipy.optimize.brent(minfunc, brack = (0, -step))
+                #xmin = scipy.optimize.brent(minfunc, brack = (0, -step))
                 # Marzari's fixed step
-                #xmin = step
+                xmin = -step
 
                 mix_matrix = self.get_mix_matrix(mix_matrix, xmin, gradient)
         except iteration.IterationStalled:
