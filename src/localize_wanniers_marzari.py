@@ -160,7 +160,7 @@ def minimize_by_cg(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None
     # Polak-Ribi`ere with implicit restart
 
     d = last_r = -grad(x)
-    observer = iteration.make_observer(min_change = 1e-10, max_unchanged = 3)
+    observer = iteration.make_observer(min_change = 1e-14, max_unchanged = 300)
     observer.reset()
 
     last_fval = f(x)
@@ -179,7 +179,7 @@ def minimize_by_cg(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None
             alpha, fval, iter, funcalls = scipy.optimize.brent(
                 minfunc, brack = (0, step), full_output = True)
             observer.add_data_point(fval)
-            print "Target value: %f (D:%f) - %d calls in last step - step size %f" % (
+            print "Target value: %f (D:%.9f) - %d calls in last step - step size %f" % (
                 fval, fval - last_fval, funcalls, alpha)
             last_fval = fval
 
@@ -988,8 +988,8 @@ def run():
     print "Gaps:", gaps
     print "Clusters:", clusters
 
-    bands = crystal.Bands[1:4]
-    pbands = crystal.PeriodicBands[1:4]
+    bands = crystal.Bands[0:4]
+    pbands = crystal.PeriodicBands[0:4]
 
     job = stopwatch.Job("guessing initial mix")
     mix_matrix = guess_initial_mix_matrix(crystal, bands, sp)
