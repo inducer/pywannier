@@ -93,16 +93,16 @@ def make_random_k_dependent_skew_hermitian_matrix(crystal, size, tc):
         matrix[k_index] = randomized.make_random_skewhermitian_matrix(size, tc)
     return matrix
 
+def complex2float(x, bound=1e-10):
+    assert abs(x.imag) < bound
+    return x.real
+
 def grad_scalar_product(a1, a2):
-    rp = num.multiply(a1.real, a2.real)
-    ip = num.multiply(a1.imaginary, a2.imaginary)
-    return num.sum(rp) + num.sum(ip)
+    return num.trace[a1*a2.H]
 
 def k_dependent_matrix_gradient_scalar_product(k_grid, a1, a2):
-    result = sum(num.trace(a1[k_index]*a2[k_index]) for k_index in k_grid) \
+    return sum(num.trace(a1[k_index]*a2[k_index].H) for k_index in k_grid) \
              / k_grid.grid_point_count()
-    assert abs(result.imag) < 1e-10
-    return result.real
 
 def operate_on_k_dependent_matrix(k_grid, a, m_op):
     result = {}
@@ -185,7 +185,8 @@ def minimize_by_cg(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None
 
             x = x_plus_alpha_grad(x, alpha, d)
             r = -grad(x)
-            beta = max(0, sp(r, r - last_r)/sp(last_r, last_r))
+            beta = max(0, complex2float(
+                sp(r, r - last_r)/sp(last_r, last_r)))
             d = r + beta * d
             last_r = r
 
@@ -471,7 +472,7 @@ class MarzariSpreadMinimizer:
                 t = num.multiply(r_tilde, q)
 
                 result += 2. * self.KWeights.KWeights[kgii_index] * \
-                          (-(r-r.H) + (t+t.H)*1j)
+                          (r-r.H + (t+t.H)*-1j)
 
             gradient[k_index] = result
         return gradient
@@ -493,7 +494,7 @@ class MarzariSpreadMinimizer:
                 # Omega_OD part
                 r = num.multiply(m.H, m_diagonal)
 
-                result += -2. * self.KWeights.KWeights[kgii_index] * (r-r.H)
+                result += 2. * self.KWeights.KWeights[kgii_index] * (r-r.H)
             gradient[k_index] = result
         return gradient
 
@@ -523,7 +524,7 @@ class MarzariSpreadMinimizer:
                             * wannier_centers[n]
                 t = num.multiply(r_tilde, q)
 
-                result += 2.j * self.KWeights.KWeights[kgii_index] * (t+t.H)
+                result += -2.j * self.KWeights.KWeights[kgii_index] * (t+t.H)
 
             gradient[k_index] = result
         return gradient
@@ -606,7 +607,7 @@ class MarzariSpreadMinimizer:
 
         oi = self.omega_i(len(pbands), orig_sps)
 
-        observer = iteration.make_observer(min_change = 1e-7, max_unchanged = 3)
+        observer = iteration.make_observer(min_change = 1e-11, max_unchanged = 3)
         observer.reset()
         try:
             while True:
@@ -747,8 +748,10 @@ class MarzariSpreadMinimizer:
 
                     new_grad_od = self.spread_functional_gradient_omega_od(len(pbands), temp_sps)
                     new_grad_d = self.spread_functional_gradient_omega_d(len(pbands), temp_sps)
-                    sp_od = k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, new_grad_od, gradient)
-                    sp_d = k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, new_grad_d, gradient)
+                    sp_od = complex2float(
+                        k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, new_grad_od, gradient))
+                    sp_d = complex2float(
+                        k_dependent_matrix_gradient_scalar_product(self.Crystal.KGrid, new_grad_d, gradient))
                     sp = sp_od + sp_d
 
                     oi_here = self.omega_i(len(pbands), temp_sps)
@@ -757,7 +760,7 @@ class MarzariSpreadMinimizer:
                     return od, ood, sp_d, sp_od
                            
                 # negative because we're pointing downwards!
-                step = -0.5/(4*sum(self.KWeights.KWeights))
+                step = 0.5/(4*sum(self.KWeights.KWeights))
 
                 if self.InteractivityLevel and (raw_input("see plot? y/n [n]:") == "y"):
                     pytools.write_1d_gnuplot_graphs(plotfunc, -5*step, 5 * step, 
@@ -994,7 +997,7 @@ def run():
 
     minimizer_class = MarzariSpreadMinimizer
     minimizer = minimizer_class(crystal, sp, debug_mode, interactivity_level)
-    mix_matrix = minimizer.minimize_spread(bands, pbands, mix_matrix)
+    mix_matrix = minimizer.minimize_spread_2(bands, pbands, mix_matrix)
 
     mixed_bands = compute_mixed_bands(crystal, bands, mix_matrix)
 
