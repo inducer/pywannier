@@ -8,7 +8,6 @@ import pytools.stopwatch as stopwatch
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 import pylinear.linear_algebra as la
-import pylinear.operation as op
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh

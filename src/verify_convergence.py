@@ -11,7 +11,7 @@ import fempy.geometry
 import fempy.visualization as visualization
 import photonic_crystal as pc
 import pylinear.array as num
-import pylinear.operation as op
+import pylinear.toybox as toybox
 import math, cmath
 
 CONSIDERED_EVALUES = 5
@@ -28,7 +28,7 @@ k_track = [0.1*rl[0],
            0.4*rl[0],
            0.4*(rl[0]+rl[1]),
            0.1*(rl[0]+rl[1])]
-k_track = pytools.interpolate_vector_list(k_track, 3)
+k_track = toybox.interpolate_vector_list(k_track, 3)
 
 eigenvalue_eoc = eoc.EOCRecorder()
 eigenfunc_l2_eoc = eoc.EOCRecorder()

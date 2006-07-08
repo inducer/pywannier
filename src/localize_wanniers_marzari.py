@@ -8,7 +8,7 @@ import pytools.stopwatch as stopwatch
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 import pylinear.linear_algebra as la
-import pylinear.operation as op
+import pylinear.computation as comp
 import pylinear.toybox as toybox
 import pylinear.randomized as randomized
 import pylinear.iteration as iteration
@@ -119,7 +119,7 @@ def operate_on_k_dependent_matrices(k_grid, a1, a2, m_op):
 def frobenius_norm_on_k_dependent_matrices(k_grid, mat):
     result = 0
     for k_index in k_grid:
-        result += op.norm_frobenius(mat[k_index])
+        result += comp.norm_frobenius(mat[k_index])
     return result
 
 def symmetric_part(matrix):
@@ -245,7 +245,7 @@ class KSpaceDirectionalWeights:
         self.KGridIncrements = [crystal.KGrid[kgii] - crystal.KGrid[0,0]
                                 for kgii in self.KGridIndexIncrements]
 
-        self.KWeights = [0.5 / op.norm_2_squared(kgi)
+        self.KWeights = [0.5 / comp.norm_2_squared(kgi)
                          for kgi in self.KGridIncrements]
 
         # verify...
@@ -308,7 +308,7 @@ class MarzariSpreadMinimizer:
                     for j in range(n_bands):
                         mat[i,j] = self.ScalarProductCalculator(pbands[i][added_tuple][1], 
                                                                 pbands[j][k_index][1])
-                err = op.norm_frobenius(mat - scalar_products[k_index, kgii]) 
+                err = comp.norm_frobenius(mat - scalar_products[k_index, kgii]) 
                 if err > 1e-13:
                     violations.append((k_index, kgii, err))
 
@@ -394,7 +394,7 @@ class MarzariSpreadMinimizer:
                                       * (1 - abs(scalar_products[k_index, kgii][n,n])**2 
                                          + arg(scalar_products[k_index, kgii][n,n])**2)
             mean_r_squared /= self.Crystal.KGrid.grid_point_count()
-            total_spread_f += mean_r_squared - op.norm_2_squared(wannier_centers[n])
+            total_spread_f += mean_r_squared - comp.norm_2_squared(wannier_centers[n])
         return total_spread_f
 
     def omega_i(self, n_bands, scalar_products):
@@ -405,7 +405,7 @@ class MarzariSpreadMinimizer:
                     continue
 
                 omega_i += self.KWeights.KWeights[kgii_index] \
-                           * (n_bands - op.norm_frobenius_squared(scalar_products[k_index, kgii]))
+                           * (n_bands - comp.norm_frobenius_squared(scalar_products[k_index, kgii]))
         return omega_i / self.Crystal.KGrid.grid_point_count()
 
     def omega_od(self, scalar_products):
@@ -556,7 +556,7 @@ class MarzariSpreadMinimizer:
 
         for k_index in self.Crystal.KGrid:
             for kgii in self.KWeights.KGridIndexIncrements:
-                assert op.norm_frobenius(sps_direct[k_index, kgii]
+                assert comp.norm_frobenius(sps_direct[k_index, kgii]
                                          - sps_updated[k_index, kgii]) < 1e-13
 
         sf1 = self.spread_functional(len(pbands), sps_updated)
@@ -668,14 +668,14 @@ class MarzariSpreadMinimizer:
                             dm1 = new_m - m
                             dm2 = dw_plusb*m + m*dw.H
 
-                            before_oiod_here = w_b * (len(pbands)-op.norm_2_squared(m_diagonal))
-                            after_oiod_here = w_b * (len(pbands)-op.norm_2_squared(new_m_diagonal))
+                            before_oiod_here = w_b * (len(pbands)-comp.norm_2_squared(m_diagonal))
+                            after_oiod_here = w_b * (len(pbands)-comp.norm_2_squared(new_m_diagonal))
 
                             before_oiod2 += before_oiod_here
                             after_oiod2 += after_oiod_here
                             doiod_here2  = after_oiod_here-before_oiod_here
-                            doiod_here2b = w_b * (+op.norm_2_squared(m_diagonal)
-                                                  -op.norm_2_squared(new_m_diagonal))
+                            doiod_here2b = w_b * (+comp.norm_2_squared(m_diagonal)
+                                                  -comp.norm_2_squared(new_m_diagonal))
                             assert abs(doiod_here2 - doiod_here2b) < 1e-11
 
                             doiod_here2c = 2 * w_b * sum(num.multiply(-new_m_diagonal+m_diagonal,
@@ -708,13 +708,13 @@ class MarzariSpreadMinimizer:
 
                             if print_count:
                                 #print k_index, kgii
-                                #print "dw", op.norm_frobenius(dw)
-                                #print "dm1", op.norm_frobenius(dm1)
-                                #print "dm2", op.norm_frobenius(dm2)
+                                #print "dw", comp.norm_frobenius(dw)
+                                #print "dm1", comp.norm_frobenius(dm1)
+                                #print "dm2", comp.norm_frobenius(dm2)
                                 #print "dm2-dm1", \
-                                      #op.norm_frobenius(dm2-dm1) \
-                                      #/ op.norm_frobenius(dm1), \
-                                      #" - abs:", op.norm_frobenius(dm2-dm1)
+                                      #comp.norm_frobenius(dm2-dm1) \
+                                      #/ comp.norm_frobenius(dm1), \
+                                      #" - abs:", comp.norm_frobenius(dm2-dm1)
                                 #print "doiod_here", doiod_here2, doiod_here4
                                 #print "b and c", doiod_here2b, doiod_here2c
                                 print "doiod_here", k_index, kgii, half_doiod_here3, half_a_doiod_here5, half_b_doiod_here5
@@ -904,7 +904,7 @@ def generate_random_gaussians(crystal, typecode):
         # FIXME this is dependent on dlb actually being unit vectors
         def gaussian(point):
             arg = sigma_inv*(point - center)
-            return math.exp(-op.norm_2_squared(arg))
+            return math.exp(-comp.norm_2_squared(arg))
 
         yield fempy.mesh_function.discretize_function(crystal.Mesh, 
                                                       gaussian, 
@@ -949,7 +949,7 @@ def guess_initial_mix_matrix(crystal, bands, sp):
                 my_sps[n,m] = my_sp
                 my_sps[m,n] = my_sp.conjugate()
 
-        inv_sqrt_my_sps = 1/op.cholesky(my_sps)
+        inv_sqrt_my_sps = 1/comp.cholesky(my_sps)
 
         mix_matrix[k_index] = num.zeros((len(bands), len(bands)), num.Complex)
         for n in range(len(bands)):

@@ -10,7 +10,8 @@ import fempy.visualization
 # Numeric imports -------------------------------------------------------------
 import pylinear.array as num
 import pylinear.linear_algebra as la
-import pylinear.operation as op
+import pylinear.computation as comp
+import pylinear.operator as op
 import pylinear.toybox as toybox
 
 
@@ -46,7 +47,7 @@ class CircularFunctionRemapper:
         self.Function = f
 
     def __call__(self, x):
-        return self.Function(op.norm_2(x))
+        return self.Function(comp.norm_2(x))
 
 
 
@@ -229,12 +230,12 @@ def find_periodicity_nodes(mesh, boundary, grid_vectors, order = 2):
             if not boundary.contains_point(ideal_point):
                 continue
 
-            dist_threshold = op.norm_2(gv) * 0.3
+            dist_threshold = comp.norm_2(gv) * 0.3
 
             close_nodes_with_dists = filter(
                 lambda (n, dist): dist <= dist_threshold, 
                 pytools.decorate(
-                lambda other_node: op.norm_2(ideal_point - other_node.Coordinates), bnodes))
+                lambda other_node: comp.norm_2(ideal_point - other_node.Coordinates), bnodes))
             close_nodes_with_dists.sort(lambda (n1,d1), (n2,d2): cmp(d1,d2))
             
             if not close_nodes_with_dists:
@@ -659,7 +660,7 @@ def periodicize_modes(crystal, modes, exponent=-1, verify=False):
             k = crystal.KGrid[k_index]
             for (evalue, emode), (pevalue, pemode) in zip(modes[k_index], pmodes[k_index]):
                 this_pmode = periodicize_mesh_function(emode, k, exponent)
-                assert op.norm_2((this_pmode - pemode).vector()) < 1e-10
+                assert comp.norm_2((this_pmode - pemode).vector()) < 1e-10
 
     return pmodes
 

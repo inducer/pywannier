@@ -4,7 +4,7 @@ import fempy.mesh
 import fempy.visualization
 import photonic_crystal as pc
 import pylinear.array as num
-import pylinear.operation as op
+import pylinear.computation as comp
 import pylinear.toybox as toybox
 import math, cmath
 
@@ -45,7 +45,7 @@ class Problem1D:
         m = num.asarray(m, s.typecode(), num.DenseMatrix)
         total_s = mm(a, mm(s, num.hermite(a)))
         total_m = mm(a, mm(m, num.hermite(a)))
-        return op.spectral_condition_number(total_s), op.spectral_condition_number(total_s, 1)
+        return comp.spectral_condition_number(total_s), op.spectral_condition_number(total_s, 1)
 
     def get_eigenvalues(self, k):
         rl = self.Lattice.ReciprocalLattice

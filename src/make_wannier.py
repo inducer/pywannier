@@ -3,7 +3,7 @@ import cPickle as pickle
 
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
-import pylinear.operation as op
+import pylinear.computation as comp
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -96,7 +96,7 @@ k_grid_index_increments = [tuple(i)
                            for i in tools.enumerateBasicDirections(2)]
 k_grid_increments = [crystal.KGrid[kgi] - crystal.KGrid[0,0]
                      for kgi in k_grid_index_increments]
-k_weights = [1/(2. * op.norm_2_squared(kgi))
+k_weights = [1/(2. * comp.norm_2_squared(kgi))
              for kgi in k_grid_increments]
 
 # corresponds to M in Marzari's paper.

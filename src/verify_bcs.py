@@ -6,9 +6,7 @@ import pytools.stopwatch as stopwatch
 # Numerics imports ------------------------------------------------------------
 import pylinear.array as num
 import pylinear.linear_algebra as la
-import pylinear.operation as op
-
-import scipy.optimize
+import pylinear.computation as comp
 
 # fempy -----------------------------------------------------------------------
 import fempy.mesh
@@ -49,7 +47,7 @@ for crystal in crystals:
                               * mode[node]
                     my_periodic_sum += weight * pmode[node]
 
-                assert op.norm_2(my_coord_sum) < 1e-9
+                assert comp.norm_2(my_coord_sum) < 1e-9
                 assert abs(my_sum) < 1e-9
                 assert abs(my_periodic_sum) < 1e-9
     job.done()
