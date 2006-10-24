@@ -175,9 +175,12 @@ def minimize_by_cg(x, f, grad, x_plus_alpha_grad, step, sp, log_filenames = None
     try:
         while True:
             def minfunc(alpha):
-                return f(x_plus_alpha_grad(x, alpha, d))
+                return f(x_plus_alpha_grad(x, float(alpha), d))
+
             alpha, fval, iter, funcalls = scipy.optimize.brent(
                 minfunc, brack = (0, step), full_output = True)
+            alpha = float(alpha)
+            
             observer.add_data_point(fval)
             print "Target value: %f (D:%.9f) - %d calls in last step - step size %f" % (
                 fval, fval - last_fval, funcalls, alpha)
@@ -607,7 +610,7 @@ class MarzariSpreadMinimizer:
 
         oi = self.omega_i(len(pbands), orig_sps)
 
-        observer = iteration.make_observer(min_change = 1e-11, max_unchanged = 3)
+        observer = iteration.make_observer(min_change = 1e-7, max_unchanged = 3)
         observer.reset()
         try:
             while True:
@@ -949,7 +952,10 @@ def guess_initial_mix_matrix(crystal, bands, sp):
                 my_sps[n,m] = my_sp
                 my_sps[m,n] = my_sp.conjugate()
 
-        inv_sqrt_my_sps = 1/comp.cholesky(my_sps)
+        #inv_sqrt_my_sps = 1/comp.cholesky(my_sps)
+        inv_sqrt_my_sps = toybox.apply_f_to_symmetric(
+                lambda x: 1/math.sqrt(x), 
+                my_sps)
 
         mix_matrix[k_index] = num.zeros((len(bands), len(bands)), num.Complex)
         for n in range(len(bands)):
