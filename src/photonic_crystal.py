@@ -383,7 +383,7 @@ def find_bands(crystal, modes, scalar_product_calculator):
             # or, rather, needs parameter adjustment...
             joint_scores[index] = len(eigenmodes)/(1e-20+sps[index]) + distances[index]
 
-        best_index = indices[pytools.argmin(indices, lambda i: distances[i])]
+        best_index = indices[pytools.argmin(distances[i] for i in indices)]
         return best_index
 
         best_value = distances[best_index]
@@ -497,34 +497,34 @@ def visualize_bands_vtk(filename, crystal, bands):
 
     nodes = []
     quads = []
+    values = []
 
     def scale_eigenvalue(ev):
         return math.sqrt(abs(ev)) / (2 * math.pi)
 
-    node_lookup = {}
-    for i,j in k_grid:
-        spot = k_grid[i,j]
-        node_lookup[i,j] = len(nodes)
-        nodes.append((spot[0], spot[1], 0))
-
-    for i,j in k_grid.chop_upper_boundary():
-        quads.append((
-            node_lookup[i,j],
-            node_lookup[i+1,j],
-            node_lookup[i+1,j+1],
-            node_lookup[i,j+1],
-            node_lookup[i,j]))
-
-
-    datasets = []
     for i, band in enumerate(bands):
-        values = []
-        for k_index in k_grid:
-            values.append(scale_eigenvalue(band[k_index][0]))
-        datasets.append(pyvtk.Scalars(values, "band%d" % i, "default"))
+        node_lookup = {}
+
+        for i,j in k_grid:
+            spot = k_grid[i,j]
+            node_lookup[i,j] = len(nodes)
+
+            ev = scale_eigenvalue(band[i,j][0])
+            nodes.append((spot[0], spot[1], 10*ev))
+            values.append(ev)
+
+        for i,j in k_grid.chop_upper_boundary():
+            quads.append((
+                node_lookup[i,j],
+                node_lookup[i+1,j],
+                node_lookup[i+1,j+1],
+                node_lookup[i,j+1],
+                node_lookup[i,j]))
+
+    scalars = pyvtk.Scalars(values, "bands", "default")
             
     structure = pyvtk.PolyData(points = nodes, polygons = quads)
-    vtk = pyvtk.VtkData(structure, "Bands", pyvtk.PointData(*datasets))
+    vtk = pyvtk.VtkData(structure, "Bands", pyvtk.PointData(scalars))
     vtk.tofile(filename, "ascii")
 
 
@@ -667,14 +667,14 @@ def periodicize_modes(crystal, modes, exponent=-1, verify=False):
 
 
 
-def visualize_grid_function(multicell_grid, func_on_multicell_grid):
+def visualize_grid_function(multicell_grid, func_on_multicell_grid, basename=",,result"):
     offsets_and_mesh_functions = []
     for multicell_index in multicell_grid:
         R = multicell_grid[multicell_index]
         offsets_and_mesh_functions.append((R, func_on_multicell_grid[multicell_index]))
     fempy.visualization.visualize_several_meshes(
         "vtk", 
-        (",,result.vtk", ",,result_grid.vtk"), 
+        ("%s.vtk" % basename, "%s_grid.vtk" % basename), 
         offsets_and_mesh_functions)
 
 

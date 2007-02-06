@@ -1,7 +1,6 @@
 import cPickle as pickle
 
-# fempy -----------------------------------------------------------------------
-import fempy.stopwatch
+import pytools
 
 # Local imports ---------------------------------------------------------------
 import photonic_crystal as pc
@@ -9,7 +8,7 @@ import photonic_crystal as pc
 
 
 
-job = fempy.stopwatch.Job("loading")
+job = pytools.stopwatch.Job("loading")
 crystals = pickle.load(file(",,crystal_bands.pickle", "rb"))
 job.done()
 

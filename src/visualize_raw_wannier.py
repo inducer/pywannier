@@ -19,9 +19,7 @@ import photonic_crystal as pc
 
 
 
-
-def findNearestNode(mesh, point):
-    return tools.argmin(mesh.dofManager(),
+def findNearestNode(mesh, point): return tools.argmin(mesh.dofManager(),
                               lambda node: tools.norm2(node.Coordinates-point))
 
 job = fempy.stopwatch.Job("loading")
